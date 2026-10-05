@@ -20,7 +20,7 @@ class FinancialBacktester:
         self.cost_pct = transaction_cost_bps / 10000.0  # 5 bps = 0.05%
 
     def simulate(self, actual_prices: np.ndarray, predicted_prices: np.ndarray,
-                 dates: pd.DatetimeIndex = None) -> Dict[str, Any]:
+                 dates: pd.DatetimeIndex = None, is_return_forecast: bool = False) -> Dict[str, Any]:
         actual_prices = np.squeeze(actual_prices)
         predicted_prices = np.squeeze(predicted_prices)
         N = len(actual_prices)
@@ -28,9 +28,11 @@ class FinancialBacktester:
         # Observed asset returns
         asset_returns = np.diff(actual_prices) / actual_prices[:-1]
 
-        # Forecasted expected return from today's price to tomorrow's forecast
-        # signal_t decided at t using predicted_prices[t] vs actual_prices[t-1]
-        pred_returns = (predicted_prices[1:] - actual_prices[:-1]) / actual_prices[:-1]
+        # Forecasted expected return
+        if is_return_forecast:
+            pred_returns = predicted_prices[1:]
+        else:
+            pred_returns = (predicted_prices[1:] - actual_prices[:-1]) / actual_prices[:-1]
 
         # Binary or Directional Position (+1 for Long, 0 for Cash/Neutral)
         signals = (pred_returns > self.threshold).astype(float)

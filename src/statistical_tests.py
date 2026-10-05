@@ -52,7 +52,7 @@ def diebold_mariano_test(y_true: np.ndarray, y_pred1: np.ndarray, y_pred2: np.nd
         
     variance_d = (gamma_0 + gamma_sum) / T
     if variance_d <= 1e-12:
-        return 0.0, 1.0, "1.0000"
+        return 0.0, 1.0, "1.0000", "No significant difference"
         
     dm_stat = mean_d / np.sqrt(variance_d)
     
@@ -69,7 +69,17 @@ def diebold_mariano_test(y_true: np.ndarray, y_pred1: np.ndarray, y_pred2: np.nd
     else:
         p_val_str = f"{p_val_raw:.4f}"
         
-    return round(hln_stat, 4), p_val_raw, p_val_str
+    # Directional interpretation:
+    # d = e1^2 - e2^2, so hln_stat > 0 means Model 1 has HIGHER error than Model 2.
+    if p_val_raw < 0.05:
+        if hln_stat < 0:
+            conclusion_str = "Proposed has significantly LOWER error"
+        else:
+            conclusion_str = "Baseline has significantly LOWER error"
+    else:
+        conclusion_str = "No significant difference"
+        
+    return round(hln_stat, 4), p_val_raw, p_val_str, conclusion_str
 
 
 def aggregate_seed_metrics(seed_records: list) -> Dict[str, str]:

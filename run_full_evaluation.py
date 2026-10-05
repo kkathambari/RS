@@ -45,27 +45,34 @@ def set_seed(seed=42):
 
 
 def run_comprehensive_evaluation(ticker: str = "AAPL",
+                                 target_type: str = "price",
                                  feature_level: str = "level2_returns",
                                  time_step: int = 30,
                                  epochs: int = 15,
                                  seeds: list = [42, 101, 2024, 777, 999],
                                  results_dir: str = "results"):
+    target_col = "Close" if target_type.lower() == "price" else "Return"
+    is_return = (target_type.lower() == "return")
+
     print(f"\n==================================================================")
     print(f"AUTHORITATIVE RESEARCH EVALUATION ENGINE: {ticker}")
-    print(f"Features: {feature_level} | Time Step: {time_step} | Epochs: {epochs}")
-    print(f"Seeds ({len(seeds)}): {seeds}")
+    print(f"Target: {target_col} ({target_type.upper()}) | Features: {feature_level} | Time Step: {time_step}")
+    print(f"Epochs: {epochs} | Seeds ({len(seeds)}): {seeds}")
     print(f"==================================================================")
 
     # 1. Load Data & Extract Features
     raw_df = load_frozen_dataset(ticker)
     feat_df, feature_cols = engineer_financial_features(raw_df, level=feature_level)
-    target_idx = feature_cols.index('Close')
+    target_idx = feature_cols.index(target_col)
     num_features = len(feature_cols)
 
-    # 2. Strict Train-Only Regime Detector Fit (70% Partition)
-    train_end = int(len(feat_df) * 0.70)
+    # 2. Single Chronological Timestamp Cutoff for ALL Components
+    train_end_idx = int(len(feat_df) * 0.70)
+    train_cutoff_date = feat_df.index[train_end_idx]
+
+    # Fit GMM Regime Detector strictly up to the exact train_cutoff_date
     reg_det = MarketRegimeDetector(n_regimes=4, random_state=42)
-    reg_det.fit(raw_df.iloc[:train_end])
+    reg_det.fit(raw_df.loc[:train_cutoff_date])
     reg_labels_all, reg_probs_all, _ = reg_det.predict_regimes(raw_df)
 
     feat_dates = feat_df.index
@@ -83,7 +90,7 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
     # 3. Chronological Train / Val / Test Partition
     datasets = prepare_datasets(
         df=feat_df, feature_cols=feature_cols,
-        target_col='Close', time_step=time_step,
+        target_col=target_col, time_step=time_step,
         train_ratio=0.70, val_ratio=0.15
     )
 
@@ -102,6 +109,13 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
     test_regimes = np.array([aligned_labels[f_map[d]] for d in datasets['dates_test']])
 
     y_test_act = inverse_transform_target(scaler, y_test, target_idx, num_features)
+
+    # Also track actual prices for financial backtesting if predicting returns
+    if is_return:
+        close_idx = feature_cols.index('Close')
+        actual_test_prices = inverse_transform_target(scaler, X_test_seq[:, -1, close_idx], close_idx, num_features)
+    else:
+        actual_test_prices = y_test_act
 
     # -------------------------------------------------------------
     # SECTION 1: SYMMETRICAL 5-MODEL MULTI-SEED ABLATION
@@ -126,7 +140,7 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
         m_a = build_vanilla_gru(time_step, num_features)
         m_a, _, _ = train_dl_baseline(m_a, X_train_seq, y_train, X_val_seq, y_val, epochs=epochs, ckpt_name=f"v_gru_s{s}")
         p_a = inverse_transform_target(scaler, m_a.predict(X_test_seq, verbose=0), target_idx, num_features)
-        seed_metrics["Model A: Vanilla GRU"].append(compute_forecasting_metrics(y_test_act, p_a))
+        seed_metrics["Model A: Vanilla GRU"].append(compute_forecasting_metrics(y_test_act, p_a, is_return=is_return))
         seed_preds["Model A: Vanilla GRU"] = p_a
 
         # Model B: Standard Attention GRU
@@ -134,7 +148,7 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
         m_b = build_standard_attention_gru(time_step, num_features)
         m_b, _, _ = train_dl_baseline(m_b, X_train_seq, y_train, X_val_seq, y_val, epochs=epochs, ckpt_name=f"std_att_s{s}")
         p_b = inverse_transform_target(scaler, m_b.predict(X_test_seq, verbose=0), target_idx, num_features)
-        seed_metrics["Model B: Standard Attention GRU"].append(compute_forecasting_metrics(y_test_act, p_b))
+        seed_metrics["Model B: Standard Attention GRU"].append(compute_forecasting_metrics(y_test_act, p_b, is_return=is_return))
         seed_preds["Model B: Standard Attention GRU"] = p_b
 
         # Model C: GRU + Enhanced Attention (Static)
@@ -142,7 +156,7 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
         m_c, _, _ = train_gru_model(X_train_seq, y_train, X_val_seq, y_val, use_attention=True,
                                     time_step=time_step, epochs=epochs, ckpt_name=f"enh_att_s{s}")
         p_c = inverse_transform_target(scaler, m_c.predict(X_test_seq, verbose=0), target_idx, num_features)
-        seed_metrics["Model C: GRU + Enhanced Attention (Static)"].append(compute_forecasting_metrics(y_test_act, p_c))
+        seed_metrics["Model C: GRU + Enhanced Attention (Static)"].append(compute_forecasting_metrics(y_test_act, p_c, is_return=is_return))
         seed_preds["Model C: GRU + Enhanced Attention (Static)"] = p_c
 
         # Model D: Regime-Feature GRU (Control: direct features, no attention)
@@ -152,7 +166,7 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
                                       [X_val_seq, X_val_reg], y_val,
                                       epochs=epochs, ckpt_name=f"reg_feat_s{s}")
         p_d = inverse_transform_target(scaler, m_d.predict([X_test_seq, X_test_reg], verbose=0), target_idx, num_features)
-        seed_metrics["Model D: Regime-Feature GRU (No Attention)"].append(compute_forecasting_metrics(y_test_act, p_d))
+        seed_metrics["Model D: Regime-Feature GRU (No Attention)"].append(compute_forecasting_metrics(y_test_act, p_d, is_return=is_return))
         seed_preds["Model D: Regime-Feature GRU (No Attention)"] = p_d
 
         # Model E: Proposed Regime-Adaptive Attention GRU
@@ -163,7 +177,7 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
             time_step=time_step, epochs=epochs, ckpt_name=f"reg_adapt_s{s}"
         )
         p_e = inverse_transform_target(scaler, m_e.predict([X_test_seq, X_test_reg], verbose=0), target_idx, num_features)
-        seed_metrics["Model E: Proposed Regime-Adaptive Attention GRU"].append(compute_forecasting_metrics(y_test_act, p_e))
+        seed_metrics["Model E: Proposed Regime-Adaptive Attention GRU"].append(compute_forecasting_metrics(y_test_act, p_e, is_return=is_return))
         seed_preds["Model E: Proposed Regime-Adaptive Attention GRU"] = p_e
 
     # Compile Multi-Seed Symmetrical Summary
@@ -201,6 +215,11 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
         regime_breakdown_rows.append(row)
     regime_breakdown_df = pd.DataFrame(regime_breakdown_rows)
     print(regime_breakdown_df.to_string(index=False))
+    n_high_vol = int(np.sum(test_regimes == "HIGH_VOLATILITY"))
+    if n_high_vol < 10:
+        print(f">> Note: High-Volatility state contains only n={n_high_vol} test samples; findings for this state are preliminary and descriptive.")
+    else:
+        print(f">> Regime test partition distribution: BULL={int(np.sum(test_regimes=='BULL'))}, BEAR={int(np.sum(test_regimes=='BEAR'))}, SIDEWAYS={int(np.sum(test_regimes=='SIDEWAYS'))}, HIGH_VOL={n_high_vol}.")
 
     # -------------------------------------------------------------
     # SECTION 3: DIEBOLD-MARIANO HYPOTHESIS TESTS (NEWEY-WEST + HLN)
@@ -217,13 +236,15 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
     ]
 
     for comp_name, baseline_pred in comparisons:
-        dm_stat, p_val_raw, p_val_str = diebold_mariano_test(y_test_act, pred_proposed, baseline_pred, h=1, criterion="MSE")
+        dm_stat, p_val_raw, p_val_str, conclusion_str = diebold_mariano_test(
+            y_test_act, pred_proposed, baseline_pred, h=1, criterion="MSE"
+        )
         dm_rows.append({
             "Pairwise Comparison": comp_name,
             "Loss Criterion": "MSE",
             "HLN-Adjusted DM Stat": dm_stat,
             "p-value": p_val_str,
-            "Significance (alpha=0.05)": "SIGNIFICANT (p < 0.05)" if p_val_raw < 0.05 else "Not Significant"
+            "Statistical Result": conclusion_str
         })
     dm_df = pd.DataFrame(dm_rows)
     print(dm_df.to_string(index=False))
@@ -232,19 +253,19 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
     # SECTION 4: 3-FOLD EXPANDING WALK-FORWARD VALIDATION
     # -------------------------------------------------------------
     print("\n--- SECTION 4: 3-FOLD EXPANDING WALK-FORWARD VALIDATION ---")
-    wf_df, wf_agg = run_walk_forward_validation(feat_df, feature_cols, time_step=time_step, epochs=epochs, seed=42)
+    wf_df, wf_agg = run_walk_forward_validation(feat_df, feature_cols, time_step=time_step, epochs=epochs, n_folds=3, seed=42)
     print(wf_df.to_string(index=False))
     print(f"\nWalk-Forward Summary -> Mean RMSE: {wf_agg['mean_rmse']} +/- {wf_agg['std_rmse']} | Mean R2: {wf_agg['mean_r2']} | Mean MDA: {wf_agg['mean_mda']}%")
 
     # -------------------------------------------------------------
     # SECTION 5: FINANCIAL BACKTESTING & RISK PROFILE (PHASE 17)
     # -------------------------------------------------------------
-    print("\n--- SECTION 5: FINANCIAL STRATEGY BACKTESTING ---")
+    print("\n--- SECTION 5: 5-BPS TRANSACTION-COST-ADJUSTED FINANCIAL BACKTESTING ---")
     backtester = FinancialBacktester(threshold=0.0005, transaction_cost_bps=5.0)
     
-    bt_prop = backtester.simulate(y_test_act, pred_proposed, dates=datasets['dates_test'])['metrics']
-    bt_vgru = backtester.simulate(y_test_act, seed_preds["Model A: Vanilla GRU"], dates=datasets['dates_test'])['metrics']
-    bt_regfeat = backtester.simulate(y_test_act, seed_preds["Model D: Regime-Feature GRU (No Attention)"], dates=datasets['dates_test'])['metrics']
+    bt_prop = backtester.simulate(actual_test_prices, pred_proposed, dates=datasets['dates_test'], is_return_forecast=is_return)['metrics']
+    bt_vgru = backtester.simulate(actual_test_prices, seed_preds["Model A: Vanilla GRU"], dates=datasets['dates_test'], is_return_forecast=is_return)['metrics']
+    bt_regfeat = backtester.simulate(actual_test_prices, seed_preds["Model D: Regime-Feature GRU (No Attention)"], dates=datasets['dates_test'], is_return_forecast=is_return)['metrics']
 
     bt_df = pd.DataFrame([
         {"Metric": "Cumulative Return", "Proposed (Model E)": f"{bt_prop['Strategy Return (%)']}%", "Vanilla GRU (Model A)": f"{bt_vgru['Strategy Return (%)']}%", "Regime-Feature (Model D)": f"{bt_regfeat['Strategy Return (%)']}%", "Buy & Hold Benchmark": f"{bt_prop['Buy & Hold Return (%)']}%"},
@@ -257,28 +278,31 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
     print(bt_df.to_string(index=False))
 
     # Persist all audited research tables to results/
+    prefix = f"{ticker}_{target_type}" if target_type != "price" else ticker
     os.makedirs(results_dir, exist_ok=True)
-    regime_char_df.to_csv(os.path.join(results_dir, f"table_regime_characterization_{ticker}.csv"), index=False)
-    multi_seed_df.to_csv(os.path.join(results_dir, f"table_multiseed_{ticker}.csv"), index=False)
-    regime_breakdown_df.to_csv(os.path.join(results_dir, f"table_regime_breakdown_{ticker}.csv"), index=False)
-    dm_df.to_csv(os.path.join(results_dir, f"table_diebold_mariano_{ticker}.csv"), index=False)
-    wf_df.to_csv(os.path.join(results_dir, f"table_walk_forward_{ticker}.csv"), index=False)
-    bt_df.to_csv(os.path.join(results_dir, f"table_backtesting_{ticker}.csv"), index=False)
+    regime_char_df.to_csv(os.path.join(results_dir, f"table_regime_characterization_{prefix}.csv"), index=False)
+    multi_seed_df.to_csv(os.path.join(results_dir, f"table_multiseed_{prefix}.csv"), index=False)
+    regime_breakdown_df.to_csv(os.path.join(results_dir, f"table_regime_breakdown_{prefix}.csv"), index=False)
+    dm_df.to_csv(os.path.join(results_dir, f"table_diebold_mariano_{prefix}.csv"), index=False)
+    wf_df.to_csv(os.path.join(results_dir, f"table_walk_forward_{prefix}.csv"), index=False)
+    bt_df.to_csv(os.path.join(results_dir, f"table_backtesting_{prefix}.csv"), index=False)
 
     print("\n==================================================================")
     print("ALL 6 AUDITED RESEARCH PUBLICATION TABLES GENERATED & PERSISTED:")
-    print(f"  1. results/table_regime_characterization_{ticker}.csv")
-    print(f"  2. results/table_multiseed_{ticker}.csv")
-    print(f"  3. results/table_regime_breakdown_{ticker}.csv")
-    print(f"  4. results/table_diebold_mariano_{ticker}.csv")
-    print(f"  5. results/table_walk_forward_{ticker}.csv")
-    print(f"  6. results/table_backtesting_{ticker}.csv")
+    print(f"  1. results/table_regime_characterization_{prefix}.csv")
+    print(f"  2. results/table_multiseed_{prefix}.csv")
+    print(f"  3. results/table_regime_breakdown_{prefix}.csv")
+    print(f"  4. results/table_diebold_mariano_{prefix}.csv")
+    print(f"  5. results/table_walk_forward_{prefix}.csv")
+    print(f"  6. results/table_backtesting_{prefix}.csv")
     print("==================================================================\n")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Full Research Evaluation (Statistical, Walk-Forward, Backtest)")
     parser.add_argument("--ticker", type=str, default="AAPL")
+    parser.add_argument("--target_type", type=str, default="price", choices=["price", "return"],
+                        help="Target variable: 'price' (Close level) or 'return' (1-day Return)")
     parser.add_argument("--feature_level", type=str, default="level2_returns")
     parser.add_argument("--timestep", type=int, default=30)
     parser.add_argument("--epochs", type=int, default=15)
@@ -287,6 +311,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     run_comprehensive_evaluation(
         ticker=args.ticker,
+        target_type=args.target_type,
         feature_level=args.feature_level,
         time_step=args.timestep,
         epochs=args.epochs,

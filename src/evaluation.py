@@ -6,7 +6,7 @@ from typing import Dict, Any
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 
-def compute_forecasting_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
+def compute_forecasting_metrics(y_true: np.ndarray, y_pred: np.ndarray, is_return: bool = False) -> Dict[str, float]:
     """Computes regression and directional accuracy metrics."""
     y_true = np.squeeze(y_true)
     y_pred = np.squeeze(y_pred)
@@ -23,9 +23,12 @@ def compute_forecasting_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[
     r2 = float(r2_score(y_true, y_pred))
 
     if len(y_true) > 1:
-        actual_delta = np.diff(y_true)
-        pred_delta = y_pred[1:] - y_true[:-1]
-        mda = float(np.mean(np.sign(actual_delta) == np.sign(pred_delta)) * 100.0)
+        if is_return:
+            mda = float(np.mean(np.sign(y_true) == np.sign(y_pred)) * 100.0)
+        else:
+            actual_delta = np.diff(y_true)
+            pred_delta = y_pred[1:] - y_true[:-1]
+            mda = float(np.mean(np.sign(actual_delta) == np.sign(pred_delta)) * 100.0)
     else:
         mda = 0.0
 
