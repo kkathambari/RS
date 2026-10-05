@@ -4,10 +4,11 @@ from typing import Dict, Any, Tuple
 
 
 def diebold_mariano_test(y_true: np.ndarray, y_pred1: np.ndarray, y_pred2: np.ndarray,
-                         h: int = 1, criterion: str = "MSE") -> Tuple[float, float]:
+                         h: int = 1, criterion: str = "MSE") -> Tuple[float, float, str]:
     """
-    Computes the Diebold-Mariano (DM) test statistic to determine if the forecast
-    accuracy difference between two models is statistically significant.
+    Computes the Diebold-Mariano (DM) test statistic with Harvey-Leybourne-Newbold (HLN)
+    correction to determine if the forecast accuracy difference between two models is
+    statistically significant.
     
     Parameters:
       y_true: Actual ground truth values (N,)
@@ -17,8 +18,9 @@ def diebold_mariano_test(y_true: np.ndarray, y_pred1: np.ndarray, y_pred2: np.nd
       criterion: "MSE" (squared error) or "MAE" (absolute error)
       
     Returns:
-      dm_stat: Test statistic. Negative value indicates Model 1 has lower error than Model 2.
-      p_value: Two-tailed p-value. If p < 0.05, Model 1 is significantly different.
+      dm_stat: HLN-corrected test statistic. Negative value indicates Model 1 has lower error.
+      p_value: Raw two-tailed p-value.
+      p_value_str: Publication-safe string formatting (e.g., '< 0.0001' or '0.0342').
     """
     y_true = np.squeeze(y_true)
     y_pred1 = np.squeeze(y_pred1)
@@ -35,27 +37,39 @@ def diebold_mariano_test(y_true: np.ndarray, y_pred1: np.ndarray, y_pred2: np.nd
         raise ValueError(f"Unknown criterion: {criterion}")
         
     T = len(d)
-    mean_d = np.mean(d)
+    mean_d = float(np.mean(d))
     
-    # Autocovariance estimation (Harvey, Leybourne & Newbold correction for h-step ahead)
-    gamma_0 = np.var(d, ddof=0)
+    # Robust Newey-West / Bartlett autocovariance estimation for long-run variance
+    # For h=1, we still allow autocorrelation up to Newey-West rule-of-thumb lag L
+    # to account for financial volatility clustering in loss differentials.
+    nw_lags = max(h - 1, int(np.floor(4.0 * ((T / 100.0) ** (2.0 / 9.0)))))
+    gamma_0 = float(np.var(d, ddof=0))
     gamma_sum = 0.0
-    for k in range(1, h):
-        gamma_k = np.sum((d[k:] - mean_d) * (d[:-k] - mean_d)) / T
-        gamma_sum += 2.0 * gamma_k
+    for k in range(1, nw_lags + 1):
+        gamma_k = float(np.sum((d[k:] - mean_d) * (d[:-k] - mean_d)) / T)
+        weight = 1.0 - (k / (nw_lags + 1.0))  # Bartlett kernel
+        gamma_sum += 2.0 * weight * gamma_k
         
     variance_d = (gamma_0 + gamma_sum) / T
     if variance_d <= 1e-12:
-        return 0.0, 1.0
+        return 0.0, 1.0, "1.0000"
         
     dm_stat = mean_d / np.sqrt(variance_d)
     
-    # Harvey-Leybourne-Newbold small-sample adjustment
-    hln_stat = dm_stat * np.sqrt((T + 1 - 2 * h + h * (h - 1) / T) / T)
+    # Harvey-Leybourne-Newbold small-sample adjustment factor
+    hln_factor = np.sqrt(max(1e-8, (T + 1 - 2 * h + (h * (h - 1)) / T) / T))
+    hln_stat = float(dm_stat * hln_factor)
     
-    p_value = 2.0 * (1.0 - stats.t.cdf(np.abs(hln_stat), df=T - 1))
+    # Student's t-distribution with (T - 1) degrees of freedom
+    p_val_raw = float(2.0 * (1.0 - stats.t.cdf(np.abs(hln_stat), df=max(1, T - 1))))
     
-    return round(float(hln_stat), 4), round(float(p_value), 5)
+    # Publication-safe string formatting: avoid literal 0.0
+    if p_val_raw < 1e-4:
+        p_val_str = "< 0.0001"
+    else:
+        p_val_str = f"{p_val_raw:.4f}"
+        
+    return round(hln_stat, 4), p_val_raw, p_val_str
 
 
 def aggregate_seed_metrics(seed_records: list) -> Dict[str, str]:

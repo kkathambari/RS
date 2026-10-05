@@ -7,26 +7,28 @@ from src.models.regime_attention_gru import train_regime_adaptive_model
 from src.evaluation import compute_forecasting_metrics
 
 
-def generate_walk_forward_folds(N: int, n_folds: int = 3, min_train_ratio: float = 0.50) -> List[Dict[str, int]]:
+def generate_walk_forward_folds(N: int, n_folds: int = 3) -> List[Dict[str, int]]:
     """
-    Generates expanding walk-forward splits:
-    Fold 1: Train [0 -> N*0.50], Val [N*0.50 -> N*0.65], Test [N*0.65 -> N*0.80]
-    Fold 2: Train [0 -> N*0.60], Val [N*0.60 -> N*0.75], Test [N*0.75 -> N*0.90]
-    Fold 3: Train [0 -> N*0.70], Val [N*0.70 -> N*0.85], Test [N*0.85 -> N*1.00]
+    Generates deterministic expanding walk-forward validation splits:
+      - Fold 1: Train [0 -> 50%], Val [50% -> 65%], Test [65% -> 80%] (Span: 80% of data)
+      - Fold 2: Train [0 -> 60%], Val [60% -> 75%], Test [75% -> 90%] (Span: 90% of data)
+      - Fold 3: Train [0 -> 70%], Val [70% -> 85%], Test [85% -> 100%] (Span: 100% of data)
+      
+    This guarantees zero future lookahead bias while strictly testing temporal generalization
+    across multiple distinct market cycles.
     """
+    windows = [
+        {"fold": 1, "train_pct": 0.50, "val_pct": 0.65, "test_pct": 0.80},
+        {"fold": 2, "train_pct": 0.60, "val_pct": 0.75, "test_pct": 0.90},
+        {"fold": 3, "train_pct": 0.70, "val_pct": 0.85, "test_pct": 1.00}
+    ][:n_folds]
     folds = []
-    step = (1.0 - min_train_ratio) / (n_folds + 1)
-    
-    for k in range(n_folds):
-        train_pct = min_train_ratio + k * step
-        val_pct = train_pct + step * 0.75
-        test_pct = min(1.0, val_pct + step * 0.75)
-        
+    for w in windows:
         folds.append({
-            "fold": k + 1,
-            "train_end": int(N * train_pct),
-            "val_end": int(N * val_pct),
-            "test_end": int(N * test_pct)
+            "fold": w["fold"],
+            "train_end": int(N * w["train_pct"]),
+            "val_end": int(N * w["val_pct"]),
+            "test_end": int(N * w["test_pct"])
         })
     return folds
 

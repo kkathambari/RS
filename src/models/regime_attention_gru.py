@@ -126,7 +126,7 @@ def train_regime_adaptive_model(X_train_seq, X_train_reg, y_train,
                                 X_val_seq, X_val_reg, y_val,
                                 time_step: int = 60, epochs: int = 30, batch_size: int = 64,
                                 gru_units: int = 64, att_units: int = 32, dense_units: int = 32,
-                                ckpt_dir: str = "artifacts/checkpoints"):
+                                ckpt_dir: str = "artifacts/checkpoints", ckpt_name: str = "regime_adaptive"):
     """Trains the proposed architecture with early stopping on validation split."""
     os.makedirs(ckpt_dir, exist_ok=True)
     num_features = X_train_seq.shape[2]
@@ -141,7 +141,7 @@ def train_regime_adaptive_model(X_train_seq, X_train_reg, y_train,
         dense_units=dense_units
     )
 
-    ckpt_path = os.path.join(ckpt_dir, "regime_adaptive_best.weights.h5")
+    ckpt_path = os.path.join(ckpt_dir, f"{ckpt_name}_best.weights.h5")
     callbacks = [
         EarlyStopping(monitor='val_loss', patience=7, restore_best_weights=True, verbose=0),
         ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, verbose=0),

@@ -96,7 +96,7 @@ def build_gru_model(time_step: int, num_features: int, use_attention: bool = Tru
 def train_gru_model(X_train, y_train, X_val, y_val, use_attention: bool = True,
                     time_step: int = 60, epochs: int = 30, batch_size: int = 64,
                     gru_units: int = 64, att_units: int = 32, dense_units: int = 32,
-                    ckpt_dir: str = "artifacts/checkpoints"):
+                    ckpt_dir: str = "artifacts/checkpoints", ckpt_name: str = None):
     """Trains model strictly using X_val for validation; X_test is held out."""
     os.makedirs(ckpt_dir, exist_ok=True)
     model = build_gru_model(
@@ -108,7 +108,8 @@ def train_gru_model(X_train, y_train, X_val, y_val, use_attention: bool = True,
         dense_units=dense_units
     )
 
-    ckpt_path = os.path.join(ckpt_dir, f"{'att' if use_attention else 'noatt'}_best.weights.h5")
+    prefix = ckpt_name if ckpt_name is not None else ('att' if use_attention else 'noatt')
+    ckpt_path = os.path.join(ckpt_dir, f"{prefix}_best.weights.h5")
     callbacks = [
         EarlyStopping(monitor='val_loss', patience=7, restore_best_weights=True, verbose=0),
         ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, verbose=0),

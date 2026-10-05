@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from keras.models import Model
 from keras.layers import (
-    Input, Dense, GRU, LSTM, Layer, Dropout,
+    Input, Dense, GRU, LSTM, Layer, Dropout, Concatenate,
     GlobalAveragePooling1D, MultiHeadAttention, LayerNormalization
 )
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
@@ -53,6 +53,31 @@ def build_vanilla_gru(time_step: int, num_features: int, units: int = 64,
     drop_2 = Dropout(dropout)(dense)
     output = Dense(1, name="prediction")(drop_2)
     model = Model(inputs=inputs, outputs=output, name="Baseline_Vanilla_GRU")
+    model.compile(optimizer='adam', loss='mean_squared_error')
+    return model
+
+
+def build_regime_feature_gru(time_step: int, num_features: int, num_regimes: int = 4,
+                             units: int = 64, dense_units: int = 32, dropout: float = 0.2) -> Model:
+    """
+    CRITICAL ABLATION CONTROL (Model D):
+    Feeds soft regime probabilities r_t directly into the dense prediction head alongside
+    the final GRU recurrent state h_T, with NO attention mechanism.
+    
+    Proves whether regime information is useful solely as an additional input feature,
+    or if regime-conditioned temporal attention modulation is what drives performance.
+    """
+    seq_inputs = Input(shape=(time_step, num_features), name="seq_input")
+    regime_inputs = Input(shape=(num_regimes,), name="regime_input")
+    
+    gru_out = GRU(units, return_sequences=False, name="feature_gru")(seq_inputs)
+    combined = Concatenate(name="feature_regime_fusion")([gru_out, regime_inputs])
+    drop_1 = Dropout(dropout)(combined)
+    dense = Dense(dense_units, activation='relu')(drop_1)
+    drop_2 = Dropout(dropout)(dense)
+    output = Dense(1, name="prediction")(drop_2)
+    
+    model = Model(inputs=[seq_inputs, regime_inputs], outputs=output, name="Baseline_Regime_Feature_GRU")
     model.compile(optimizer='adam', loss='mean_squared_error')
     return model
 
