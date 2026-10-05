@@ -1,0 +1,18 @@
+{
+  "run_id": "AAPL_7. Transformer_42_1791211439",
+  "timestamp": "2026-10-05T20:13:59.724303",
+  "ticker": "AAPL",
+  "feature_level": "level2_returns",
+  "model": "7. Transformer",
+  "seed": 42,
+  "time_step": 30,
+  "train_samples": 1520,
+  "val_samples": 332,
+  "test_samples": 333,
+  "training_seconds": 13.0,
+  "test_rmse": 22.7945,
+  "test_mae": 19.0154,
+  "test_mape": 10.812,
+  "test_r2": -0.3743,
+  "test_directional_acc_pct": 48.49
+}

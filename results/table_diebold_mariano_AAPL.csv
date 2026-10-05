@@ -1,0 +1,3 @@
+Comparison,Loss Criterion,DM Statistic,p-value,Significance (alpha=0.05)
+Proposed vs Standard Attention GRU,MSE,-12.1236,0.0,SIGNIFICANT (p < 0.05)
+Proposed vs Vanilla GRU,MSE,9.9736,0.0,SIGNIFICANT (p < 0.05)

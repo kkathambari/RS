@@ -1,0 +1,18 @@
+{
+  "run_id": "AAPL_1. Naive (Persistence)_42_1791211328",
+  "timestamp": "2026-10-05T20:12:08.388777",
+  "ticker": "AAPL",
+  "feature_level": "level2_returns",
+  "model": "1. Naive (Persistence)",
+  "seed": 42,
+  "time_step": 30,
+  "train_samples": 1520,
+  "val_samples": 332,
+  "test_samples": 333,
+  "training_seconds": 0.0,
+  "test_rmse": 2.5936,
+  "test_mae": 1.9351,
+  "test_mape": 1.21,
+  "test_r2": 0.9822,
+  "test_directional_acc_pct": 0.3
+}

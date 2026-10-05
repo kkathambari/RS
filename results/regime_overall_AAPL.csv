@@ -1,0 +1,5 @@
+Architecture,Test RMSE,MAE,MAPE (%),R2,MDA (%)
+Proposed: Regime-Adaptive Attn GRU,7.5261,6.5403,3.922,0.8502,49.7
+Proposed: GRU-Enhanced Attn (Static),8.4167,7.2229,4.322,0.8126,47.59
+Baseline: Standard Attention GRU,10.0134,8.6239,5.144,0.7348,49.4
+Baseline: Vanilla GRU,4.8523,4.0047,2.414,0.9377,50.6

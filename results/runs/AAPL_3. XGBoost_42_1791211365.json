@@ -1,0 +1,18 @@
+{
+  "run_id": "AAPL_3. XGBoost_42_1791211365",
+  "timestamp": "2026-10-05T20:12:45.299526",
+  "ticker": "AAPL",
+  "feature_level": "level2_returns",
+  "model": "3. XGBoost",
+  "seed": 42,
+  "time_step": 30,
+  "train_samples": 1520,
+  "val_samples": 332,
+  "test_samples": 333,
+  "training_seconds": 8.17,
+  "test_rmse": 37.1591,
+  "test_mae": 31.8454,
+  "test_mape": 18.089,
+  "test_r2": -2.6521,
+  "test_directional_acc_pct": 47.29
+}

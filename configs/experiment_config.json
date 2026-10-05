@@ -1,0 +1,42 @@
+{
+  "datasets": {
+    "us_stocks": ["AAPL", "MSFT", "NVDA", "AMZN", "JPM"],
+    "indian_stocks": ["RELIANCE.NS", "TCS.NS", "INFY.NS", "HDFCBANK.NS", "ICICIBANK.NS"],
+    "indices": ["^GSPC", "^NDX", "^NSEI"]
+  },
+  "benchmark_period": {
+    "start_date": "2015-01-01",
+    "end_date": "2024-01-01"
+  },
+  "feature_levels": {
+    "level1_price": {
+      "description": "Raw price and volume",
+      "count": 5
+    },
+    "level2_returns": {
+      "description": "Price + 1d, 5d, 10d Simple & Log Returns",
+      "count": 9
+    },
+    "level3_volatility": {
+      "description": "Returns + Realized Volatility + Rolling Std + HL Range + ATR(14)",
+      "count": 13
+    },
+    "level4_full": {
+      "description": "Full Suite + Moving Averages (10,20,50) + RSI(14) + MACD(12,26,9)",
+      "count": 20
+    }
+  },
+  "training": {
+    "time_step": 60,
+    "train_ratio": 0.70,
+    "val_ratio": 0.15,
+    "test_ratio": 0.15,
+    "batch_size": 64,
+    "epochs": 30,
+    "gru_units": 64,
+    "att_units": 32,
+    "dense_units": 32,
+    "patience": 7,
+    "seeds": [42, 101, 2024, 777, 999]
+  }
+}

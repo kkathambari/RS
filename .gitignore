@@ -1,0 +1,27 @@
+# Python Bytecode and Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Environments & Virtual Envs
+.env
+.venv
+env/
+venv/
+ENV/
+build/
+dist/
+
+# Model Weights and Large Checkpoints
+*.h5
+*.weights.h5
+artifacts/checkpoints/
+artifacts/*.weights.h5
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

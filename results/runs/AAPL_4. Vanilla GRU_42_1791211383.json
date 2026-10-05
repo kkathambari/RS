@@ -1,0 +1,18 @@
+{
+  "run_id": "AAPL_4. Vanilla GRU_42_1791211383",
+  "timestamp": "2026-10-05T20:13:03.267953",
+  "ticker": "AAPL",
+  "feature_level": "level2_returns",
+  "model": "4. Vanilla GRU",
+  "seed": 42,
+  "time_step": 30,
+  "train_samples": 1520,
+  "val_samples": 332,
+  "test_samples": 333,
+  "training_seconds": 16.4,
+  "test_rmse": 3.7104,
+  "test_mae": 2.9875,
+  "test_mape": 1.822,
+  "test_r2": 0.9636,
+  "test_directional_acc_pct": 51.81
+}

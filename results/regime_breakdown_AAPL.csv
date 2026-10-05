@@ -1,0 +1,4 @@
+Regime,Samples,Regime-Adaptive Attn GRU (RMSE),GRU-Enhanced Attn (RMSE),Standard Attention GRU (RMSE),Vanilla GRU (RMSE)
+BULL,145,8.824,9.9039,12.4749,4.9528
+BEAR,73,6.7793,7.459,8.0473,5.1144
+SIDEWAYS,112,5.8929,6.627,7.1318,4.3947

@@ -1,0 +1,18 @@
+{
+  "run_id": "AAPL_6. Standard Attention GRU_42_1791211425",
+  "timestamp": "2026-10-05T20:13:45.661061",
+  "ticker": "AAPL",
+  "feature_level": "level2_returns",
+  "model": "6. Standard Attention GRU",
+  "seed": 42,
+  "time_step": 30,
+  "train_samples": 1520,
+  "val_samples": 332,
+  "test_samples": 333,
+  "training_seconds": 23.28,
+  "test_rmse": 7.6373,
+  "test_mae": 6.5346,
+  "test_mape": 4.02,
+  "test_r2": 0.8457,
+  "test_directional_acc_pct": 50.9
+}

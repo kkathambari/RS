@@ -1,0 +1,18 @@
+{
+  "run_id": "AAPL_2. Random Forest_42_1791211357",
+  "timestamp": "2026-10-05T20:12:37.122975",
+  "ticker": "AAPL",
+  "feature_level": "level2_returns",
+  "model": "2. Random Forest",
+  "seed": 42,
+  "time_step": 30,
+  "train_samples": 1520,
+  "val_samples": 332,
+  "test_samples": 333,
+  "training_seconds": 28.72,
+  "test_rmse": 34.5361,
+  "test_mae": 29.0814,
+  "test_mape": 16.445,
+  "test_r2": -2.1547,
+  "test_directional_acc_pct": 46.39
+}

@@ -1,0 +1,18 @@
+{
+  "run_id": "AAPL_8. Proposed GRU-Enhanced Attn_42_1791211465",
+  "timestamp": "2026-10-05T20:14:25.508261",
+  "ticker": "AAPL",
+  "feature_level": "level2_returns",
+  "model": "8. Proposed GRU-Enhanced Attn",
+  "seed": 42,
+  "time_step": 30,
+  "train_samples": 1520,
+  "val_samples": 332,
+  "test_samples": 333,
+  "training_seconds": 22.71,
+  "test_rmse": 8.8274,
+  "test_mae": 7.5937,
+  "test_mape": 4.576,
+  "test_r2": 0.7939,
+  "test_directional_acc_pct": 49.1
+}

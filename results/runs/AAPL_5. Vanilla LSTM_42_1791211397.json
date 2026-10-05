@@ -1,0 +1,18 @@
+{
+  "run_id": "AAPL_5. Vanilla LSTM_42_1791211397",
+  "timestamp": "2026-10-05T20:13:17.707419",
+  "ticker": "AAPL",
+  "feature_level": "level2_returns",
+  "model": "5. Vanilla LSTM",
+  "seed": 42,
+  "time_step": 30,
+  "train_samples": 1520,
+  "val_samples": 332,
+  "test_samples": 333,
+  "training_seconds": 13.5,
+  "test_rmse": 8.0822,
+  "test_mae": 6.7489,
+  "test_mape": 3.887,
+  "test_r2": 0.8272,
+  "test_directional_acc_pct": 47.89
+}

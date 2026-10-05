@@ -1,0 +1,23 @@
+{
+  "frozen_at": "2026-10-05T19:55:30.387426",
+  "start_date": "2015-01-01",
+  "end_date": "2024-01-01",
+  "tickers": [
+    "AAPL",
+    "MSFT",
+    "NVDA",
+    "RELIANCE.NS",
+    "TCS.NS",
+    "^NSEI",
+    "^GSPC"
+  ],
+  "files": {
+    "AAPL": "E:\\Research\\data\\raw\\AAPL.csv",
+    "MSFT": "E:\\Research\\data\\raw\\MSFT.csv",
+    "NVDA": "E:\\Research\\data\\raw\\NVDA.csv",
+    "RELIANCE.NS": "E:\\Research\\data\\raw\\RELIANCE_NS.csv",
+    "TCS.NS": "E:\\Research\\data\\raw\\TCS_NS.csv",
+    "^NSEI": "E:\\Research\\data\\raw\\_NSEI.csv",
+    "^GSPC": "E:\\Research\\data\\raw\\_GSPC.csv"
+  }
+}

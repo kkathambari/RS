@@ -1,0 +1,4 @@
+Fold,Train Samples,Val Samples,Test Samples,Test Period,Test RMSE,Test MAE,Test MAPE (%),Test R2,MDA (%),Train Time (s)
+Fold 1,1077,208,207,2020-06 to 2021-03,22.9095,21.6616,18.22,-1.5363,46.6,7.58
+Fold 2,1354,208,207,2021-07 to 2022-05,7.5139,5.9856,3.699,0.5901,52.43,6.58
+Fold 3,1631,207,208,2022-08 to 2023-06,8.2824,7.0527,4.676,0.6255,48.31,8.07

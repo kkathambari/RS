@@ -1,0 +1,18 @@
+{
+  "run_id": "AAPL_regime_adaptive_1791211911",
+  "timestamp": "2026-10-05T20:21:51.465700",
+  "ticker": "AAPL",
+  "feature_level": "level2_returns",
+  "model": "regime_adaptive",
+  "seed": 42,
+  "time_step": 30,
+  "train_samples": 1520,
+  "val_samples": 332,
+  "test_samples": 333,
+  "training_seconds": 7.54,
+  "test_rmse": 9.2781,
+  "test_mae": 8.0276,
+  "test_mape": 4.8,
+  "test_r2": 0.7723,
+  "test_directional_acc_pct": 50.0
+}
