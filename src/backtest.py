@@ -93,11 +93,18 @@ class FinancialBacktester:
         excess_strat = strategy_returns - daily_rf
         excess_bh = asset_returns - daily_rf
 
-        std_strat = np.std(strategy_returns)
-        std_bh = np.std(asset_returns)
+        std_strat = float(np.std(strategy_returns))
+        std_bh = float(np.std(asset_returns))
 
-        sharpe_strat = (np.mean(excess_strat) / (std_strat + 1e-8)) * np.sqrt(252.0)
-        sharpe_bh = (np.mean(excess_bh) / (std_bh + 1e-8)) * np.sqrt(252.0)
+        if std_strat < 1e-6 or np.sum(signals > 0) == 0:
+            sharpe_strat_val = "N/A"
+        else:
+            sharpe_strat_val = round(float((np.mean(excess_strat) / std_strat) * np.sqrt(252.0)), 3)
+
+        if std_bh < 1e-6:
+            sharpe_bh_val = "N/A"
+        else:
+            sharpe_bh_val = round(float((np.mean(excess_bh) / std_bh) * np.sqrt(252.0)), 3)
 
         # Max Drawdown
         def max_drawdown(equity):
@@ -120,8 +127,8 @@ class FinancialBacktester:
             "Buy & Hold Return (%)": round(float(total_ret_bh), 2),
             "Strategy Annualized (%)": round(float(ann_ret_strat), 2),
             "Buy & Hold Annualized (%)": round(float(ann_ret_bh), 2),
-            "Strategy Sharpe": round(float(sharpe_strat), 3),
-            "Buy & Hold Sharpe": round(float(sharpe_bh), 3),
+            "Strategy Sharpe": sharpe_strat_val,
+            "Buy & Hold Sharpe": sharpe_bh_val,
             "Strategy Max Drawdown (%)": round(float(mdd_strat), 2),
             "Buy & Hold Max Drawdown (%)": round(float(mdd_bh), 2),
             "Win Rate (%)": round(float(win_rate), 2),
