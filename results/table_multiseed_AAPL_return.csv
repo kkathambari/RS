@@ -1,6 +1,6 @@
 Architecture,Test RMSE (Mean +/- Std),Test MAE (Mean +/- Std),Test MAPE (%),Test R2,MDA (%)
-Model A: Vanilla GRU,0.0186 +/- 0.0010,0.0137 +/- 0.0010,241.63%,-0.2426,48.4%
-Model B: Standard Attention GRU,0.0172 +/- 0.0002,0.0126 +/- 0.0000,162.68%,-0.0595,50.5%
-Model C: GRU + Enhanced Attention (Static),0.0180 +/- 0.0013,0.0133 +/- 0.0011,190.60%,-0.1686,46.5%
+Model A: Vanilla GRU,0.0182 +/- 0.0006,0.0133 +/- 0.0005,214.02%,-0.1852,46.4%
+Model B: Standard Attention GRU,0.0170 +/- 0.0002,0.0125 +/- 0.0001,163.89%,-0.0397,50.6%
+Model C: GRU + Enhanced Attention (Static),0.0176 +/- 0.0008,0.0130 +/- 0.0008,169.50%,-0.1119,46.5%
 Model D: Regime-Feature GRU (No Attention),0.0197 +/- 0.0004,0.0147 +/- 0.0006,309.16%,-0.3965,46.5%
-Model E: Proposed Regime-Adaptive Attention GRU,0.0174 +/- 0.0003,0.0129 +/- 0.0003,157.28%,-0.0858,46.6%
+Model E: Proposed Regime-Adaptive Attention GRU,0.0173 +/- 0.0004,0.0127 +/- 0.0003,144.75%,-0.0700,46.6%

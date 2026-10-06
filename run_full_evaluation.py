@@ -49,7 +49,7 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
                                  feature_level: str = "level2_returns",
                                  time_step: int = 30,
                                  epochs: int = 15,
-                                 seeds: list = [42, 101, 2024, 777, 999],
+                                 seeds: list = [42, 101, 2024],
                                  results_dir: str = "results"):
     target_col = "Close" if target_type.lower() == "price" else "Return"
     is_return = (target_type.lower() == "return")
@@ -278,18 +278,26 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
                                   predicted_values=seed_preds["Model A: Vanilla GRU"], is_return_forecast=is_return,
                                   dates_decision=datasets['dates_test_decision'],
                                   dates_target=datasets['dates_test'])['metrics']
+    bt_std_att = backtester.simulate(current_prices=cur_p, target_prices=tar_p,
+                                     predicted_values=seed_preds["Model B: Standard Attention GRU"], is_return_forecast=is_return,
+                                     dates_decision=datasets['dates_test_decision'],
+                                     dates_target=datasets['dates_test'])['metrics']
+    bt_enh_att = backtester.simulate(current_prices=cur_p, target_prices=tar_p,
+                                     predicted_values=seed_preds["Model C: GRU + Enhanced Attention (Static)"], is_return_forecast=is_return,
+                                     dates_decision=datasets['dates_test_decision'],
+                                     dates_target=datasets['dates_test'])['metrics']
     bt_regfeat = backtester.simulate(current_prices=cur_p, target_prices=tar_p,
                                      predicted_values=seed_preds["Model D: Regime-Feature GRU (No Attention)"], is_return_forecast=is_return,
                                      dates_decision=datasets['dates_test_decision'],
                                      dates_target=datasets['dates_test'])['metrics']
 
     bt_df = pd.DataFrame([
-        {"Metric": "Cumulative Return", "Proposed (Model E)": f"{bt_prop['Strategy Return (%)']}%", "Vanilla GRU (Model A)": f"{bt_vgru['Strategy Return (%)']}%", "Regime-Feature (Model D)": f"{bt_regfeat['Strategy Return (%)']}%", "Buy & Hold Benchmark": f"{bt_prop['Buy & Hold Return (%)']}%"},
-        {"Metric": "Annualized Return", "Proposed (Model E)": f"{bt_prop['Strategy Annualized (%)']}%", "Vanilla GRU (Model A)": f"{bt_vgru['Strategy Annualized (%)']}%", "Regime-Feature (Model D)": f"{bt_regfeat['Strategy Annualized (%)']}%", "Buy & Hold Benchmark": f"{bt_prop['Buy & Hold Annualized (%)']}%"},
-        {"Metric": "Annualized Sharpe", "Proposed (Model E)": f"{bt_prop['Strategy Sharpe']}", "Vanilla GRU (Model A)": f"{bt_vgru['Strategy Sharpe']}", "Regime-Feature (Model D)": f"{bt_regfeat['Strategy Sharpe']}", "Buy & Hold Benchmark": f"{bt_prop['Buy & Hold Sharpe']}"},
-        {"Metric": "Maximum Drawdown", "Proposed (Model E)": f"{bt_prop['Strategy Max Drawdown (%)']}%", "Vanilla GRU (Model A)": f"{bt_vgru['Strategy Max Drawdown (%)']}%", "Regime-Feature (Model D)": f"{bt_regfeat['Strategy Max Drawdown (%)']}%", "Buy & Hold Benchmark": f"{bt_prop['Buy & Hold Max Drawdown (%)']}%"},
-        {"Metric": "Win Rate", "Proposed (Model E)": f"{bt_prop['Win Rate (%)']}%", "Vanilla GRU (Model A)": f"{bt_vgru['Win Rate (%)']}%", "Regime-Feature (Model D)": f"{bt_regfeat['Win Rate (%)']}%", "Buy & Hold Benchmark": "N/A"},
-        {"Metric": "Active Trading Days", "Proposed (Model E)": f"{bt_prop['Trade Days']}/{bt_prop['Total Days']}", "Vanilla GRU (Model A)": f"{bt_vgru['Trade Days']}/{bt_vgru['Total Days']}", "Regime-Feature (Model D)": f"{bt_regfeat['Trade Days']}/{bt_regfeat['Total Days']}", "Buy & Hold Benchmark": f"{bt_prop['Total Days']}/{bt_prop['Total Days']}"}
+        {"Metric": "Cumulative Return", "Vanilla GRU (A)": f"{bt_vgru['Strategy Return (%)']}%", "Standard Attn (B)": f"{bt_std_att['Strategy Return (%)']}%", "Enhanced Attn (C)": f"{bt_enh_att['Strategy Return (%)']}%", "Regime Feature (D)": f"{bt_regfeat['Strategy Return (%)']}%", "Proposed (E)": f"{bt_prop['Strategy Return (%)']}%", "Buy & Hold": f"{bt_prop['Buy & Hold Return (%)']}%"},
+        {"Metric": "Annualized Return", "Vanilla GRU (A)": f"{bt_vgru['Strategy Annualized (%)']}%", "Standard Attn (B)": f"{bt_std_att['Strategy Annualized (%)']}%", "Enhanced Attn (C)": f"{bt_enh_att['Strategy Annualized (%)']}%", "Regime Feature (D)": f"{bt_regfeat['Strategy Annualized (%)']}%", "Proposed (E)": f"{bt_prop['Strategy Annualized (%)']}%", "Buy & Hold": f"{bt_prop['Buy & Hold Annualized (%)']}%"},
+        {"Metric": "Annualized Sharpe", "Vanilla GRU (A)": f"{bt_vgru['Strategy Sharpe']}", "Standard Attn (B)": f"{bt_std_att['Strategy Sharpe']}", "Enhanced Attn (C)": f"{bt_enh_att['Strategy Sharpe']}", "Regime Feature (D)": f"{bt_regfeat['Strategy Sharpe']}", "Proposed (E)": f"{bt_prop['Strategy Sharpe']}", "Buy & Hold": f"{bt_prop['Buy & Hold Sharpe']}"},
+        {"Metric": "Maximum Drawdown", "Vanilla GRU (A)": f"{bt_vgru['Strategy Max Drawdown (%)']}%", "Standard Attn (B)": f"{bt_std_att['Strategy Max Drawdown (%)']}%", "Enhanced Attn (C)": f"{bt_enh_att['Strategy Max Drawdown (%)']}%", "Regime Feature (D)": f"{bt_regfeat['Strategy Max Drawdown (%)']}%", "Proposed (E)": f"{bt_prop['Strategy Max Drawdown (%)']}%", "Buy & Hold": f"{bt_prop['Buy & Hold Max Drawdown (%)']}%"},
+        {"Metric": "Win Rate", "Vanilla GRU (A)": f"{bt_vgru['Win Rate (%)']}%", "Standard Attn (B)": f"{bt_std_att['Win Rate (%)']}%", "Enhanced Attn (C)": f"{bt_enh_att['Win Rate (%)']}%", "Regime Feature (D)": f"{bt_regfeat['Win Rate (%)']}%", "Proposed (E)": f"{bt_prop['Win Rate (%)']}%", "Buy & Hold": "N/A"},
+        {"Metric": "Active Trading Days", "Vanilla GRU (A)": f"{bt_vgru['Trade Days']}/{bt_vgru['Total Days']}", "Standard Attn (B)": f"{bt_std_att['Trade Days']}/{bt_std_att['Total Days']}", "Enhanced Attn (C)": f"{bt_enh_att['Trade Days']}/{bt_enh_att['Total Days']}", "Regime Feature (D)": f"{bt_regfeat['Trade Days']}/{bt_regfeat['Total Days']}", "Proposed (E)": f"{bt_prop['Trade Days']}/{bt_prop['Total Days']}", "Buy & Hold": f"{bt_prop['Total Days']}/{bt_prop['Total Days']}"}
     ])
     print(bt_df.to_string(index=False))
 
