@@ -82,8 +82,8 @@ def prepare_datasets(df: pd.DataFrame, feature_cols: List[str], target_col: str 
         'scaler': scaler,
         'target_idx': target_idx,
         'feature_cols': feature_cols,
-        'train_cutoff_date': df.index[train_end_idx],
-        'val_cutoff_date': df.index[val_end_idx]
+        'train_cutoff_date': df.index[train_end_idx - 1],
+        'val_cutoff_date': df.index[val_end_idx - 1]
     }
 
 
