@@ -13,8 +13,14 @@ class FinancialBacktester:
       - Win Rate (%)
     Compares against the Buy & Hold benchmark.
     """
-    def __init__(self, threshold: float = 0.001, risk_free_rate: float = 0.02,
+    def __init__(self, threshold: float = 0.0005, risk_free_rate: float = 0.02,
                  transaction_cost_bps: float = 5.0):
+        """
+        Parameters:
+          threshold: Expected-return entry threshold (default 0.0005 = 0.05% / 5 bps)
+          risk_free_rate: Annualized cash benchmark rate for Sharpe calculation (default 0.02 = 2.0%)
+          transaction_cost_bps: Per-turnover transaction cost friction (default 5.0 bps = 0.05%)
+        """
         self.threshold = threshold
         self.risk_free_rate = risk_free_rate
         self.cost_pct = transaction_cost_bps / 10000.0  # 5 bps = 0.05%

@@ -4,7 +4,7 @@ from typing import Dict, Any, Tuple
 
 
 def diebold_mariano_test(y_true: np.ndarray, y_pred1: np.ndarray, y_pred2: np.ndarray,
-                         h: int = 1, criterion: str = "MSE") -> Tuple[float, float, str]:
+                         h: int = 1, criterion: str = "MSE") -> Tuple[float, float, str, str]:
     """
     Computes the Diebold-Mariano (DM) test statistic with Harvey-Leybourne-Newbold (HLN)
     correction to determine if the forecast accuracy difference between two models is

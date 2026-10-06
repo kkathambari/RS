@@ -1,7 +1,7 @@
 Metric,Vanilla GRU (A),Standard Attn (B),Enhanced Attn (C),Regime Feature (D),Proposed (E),Buy & Hold
-Cumulative Return,68.18%,26.89%,28.83%,2.75%,16.04%,44.41%
-Annualized Return,48.2%,19.75%,21.13%,2.07%,11.91%,32.06%
-Annualized Sharpe,1.578,0.861,0.917,0.108,0.581,1.038
+Cumulative Return,68.18%,26.89%,28.83%,6.66%,16.04%,44.41%
+Annualized Return,48.2%,19.75%,21.13%,5.0%,11.91%,32.06%
+Annualized Sharpe,1.578,0.861,0.917,0.241,0.581,1.038
 Maximum Drawdown,-15.47%,-15.47%,-15.47%,-14.53%,-15.47%,-19.65%
-Win Rate,53.78%,52.63%,51.94%,47.66%,51.69%,N/A
-Active Trading Days,251/333,133/333,129/333,128/333,89/333,333/333
+Win Rate,53.78%,52.63%,51.94%,48.31%,51.69%,N/A
+Active Trading Days,251/333,133/333,129/333,118/333,89/333,333/333
