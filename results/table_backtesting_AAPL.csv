@@ -1,7 +1,7 @@
 Metric,Proposed (Model E),Vanilla GRU (Model A),Regime-Feature (Model D),Buy & Hold Benchmark
-Cumulative Return,23.99%,11.81%,4.78%,23.57%
-Annualized Return,17.73%,8.84%,3.61%,17.42%
-Annualized Sharpe,0.921,0.494,0.18,0.663
-Maximum Drawdown,-8.37%,-8.5%,-19.41%,-23.5%
-Win Rate,59.65%,51.56%,54.78%,N/A
-Active Trading Days,57/332,64/332,157/332,332/332
+Cumulative Return,25.31%,10.28%,-5.81%,21.89%
+Annualized Return,18.62%,7.69%,-4.43%,16.16%
+Annualized Sharpe,0.845,0.425,-0.229,0.622
+Maximum Drawdown,-11.92%,-8.5%,-16.72%,-23.5%
+Win Rate,54.47%,50.77%,49.07%,N/A
+Active Trading Days,123/333,65/333,108/333,333/333

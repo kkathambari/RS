@@ -35,12 +35,14 @@ def generate_walk_forward_folds(N: int, n_folds: int = 3) -> List[Dict[str, int]
 
 def run_walk_forward_validation(feat_df: pd.DataFrame, feature_cols: List[str],
                                 time_step: int = 30, epochs: int = 15,
-                                n_folds: int = 3, seed: int = 42) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+                                n_folds: int = 3, seed: int = 42,
+                                target_col: str = 'Close', is_return: bool = False) -> Tuple[pd.DataFrame, Dict[str, Any]]:
     """
     Executes expanding walk-forward validation for the proposed Regime-Adaptive Attention model.
+    Strictly aligns regime conditioning vectors to decision time t (end of lookback window).
     """
     N = len(feat_df)
-    target_idx = feature_cols.index('Close')
+    target_idx = feature_cols.index(target_col)
     num_features = len(feature_cols)
     folds = generate_walk_forward_folds(N, n_folds=n_folds)
     
@@ -53,10 +55,11 @@ def run_walk_forward_validation(feat_df: pd.DataFrame, feature_cols: List[str],
         test_end = f['test_end']
         
         sub_df = feat_df.iloc[:test_end].copy()
+        train_cutoff_date = sub_df.index[train_end - 1]
         
-        # Train-only regime detector
+        # Train-only regime detector strictly up to train_cutoff_date
         reg_det = MarketRegimeDetector(n_regimes=4, random_state=seed)
-        reg_det.fit(sub_df.iloc[:train_end])
+        reg_det.fit(sub_df.loc[:train_cutoff_date])
         _, probs_all, _ = reg_det.predict_regimes(sub_df)
         
         # Partition
@@ -65,7 +68,7 @@ def run_walk_forward_validation(feat_df: pd.DataFrame, feature_cols: List[str],
         
         datasets = prepare_datasets(
             df=sub_df, feature_cols=feature_cols,
-            target_col='Close', time_step=time_step,
+            target_col=target_col, time_step=time_step,
             train_ratio=train_ratio, val_ratio=val_ratio
         )
         
@@ -79,22 +82,24 @@ def run_walk_forward_validation(feat_df: pd.DataFrame, feature_cols: List[str],
         
         feat_dates = sub_df.index
         d_map = {d: i for i, d in enumerate(feat_dates)}
-        X_train_reg = np.array([probs_all[d_map[d]] for d in datasets['dates_train']], dtype=np.float32)
-        X_val_reg = np.array([probs_all[d_map[d]] for d in datasets['dates_val']], dtype=np.float32)
-        X_test_reg = np.array([probs_all[d_map[d]] for d in datasets['dates_test']], dtype=np.float32)
+        # CAUSAL SAMPLING: Sample regime vector strictly at decision time t (end of X sequence)
+        X_train_reg = np.array([probs_all[d_map[d]] for d in datasets['dates_train_decision']], dtype=np.float32)
+        X_val_reg = np.array([probs_all[d_map[d]] for d in datasets['dates_val_decision']], dtype=np.float32)
+        X_test_reg = np.array([probs_all[d_map[d]] for d in datasets['dates_test_decision']], dtype=np.float32)
         
         model, dur, _ = train_regime_adaptive_model(
             X_train_seq, X_train_reg, y_train,
             X_val_seq, X_val_reg, y_val,
             time_step=time_step, epochs=epochs,
-            ckpt_dir=f"artifacts/checkpoints/wf_fold_{fold_id}"
+            ckpt_dir=f"artifacts/checkpoints/wf_fold_{fold_id}",
+            ckpt_name=f"wf_regime_adapt_{fold_id}"
         )
         
         test_preds_scaled = model.predict([X_test_seq, X_test_reg], verbose=0)
         y_test_act = inverse_transform_target(scaler, y_test, target_idx, num_features)
         y_test_pred = inverse_transform_target(scaler, test_preds_scaled, target_idx, num_features)
         
-        m = compute_forecasting_metrics(y_test_act, y_test_pred)
+        m = compute_forecasting_metrics(y_test_act, y_test_pred, is_return=is_return)
         fold_metrics.append({
             "Fold": f"Fold {fold_id}",
             "Train Samples": len(X_train_seq),

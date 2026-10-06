@@ -27,16 +27,16 @@
     }
   },
   "training": {
-    "time_step": 60,
+    "time_step": 30,
     "train_ratio": 0.70,
     "val_ratio": 0.15,
     "test_ratio": 0.15,
     "batch_size": 64,
-    "epochs": 30,
+    "epochs": 15,
     "gru_units": 64,
     "att_units": 32,
     "dense_units": 32,
     "patience": 7,
-    "seeds": [42, 101, 2024, 777, 999]
+    "seeds": [42, 101, 2024]
   }
 }

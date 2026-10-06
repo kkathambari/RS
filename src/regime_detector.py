@@ -100,7 +100,8 @@ class MarketRegimeDetector:
           - soft_probabilities (N, 4): Continuous posterior probabilities P(Regime | Features)
           - feature_df (N, 4): Extracted backward-looking indicators
         """
-        feat_df = self.extract_regime_features(df).bfill().ffill()
+        # Forward fill and zero-fill initial indicator warm-up rows (STRICT CAUSALITY, NO BFILL)
+        feat_df = self.extract_regime_features(df).ffill().fillna(0.0)
         scaled = self.scaler.transform(feat_df.values)
         probs = self.gmm.predict_proba(scaled)
         raw_clusters = np.argmax(probs, axis=1)

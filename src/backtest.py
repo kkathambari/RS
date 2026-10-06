@@ -19,29 +19,54 @@ class FinancialBacktester:
         self.risk_free_rate = risk_free_rate
         self.cost_pct = transaction_cost_bps / 10000.0  # 5 bps = 0.05%
 
-    def simulate(self, actual_prices: np.ndarray, predicted_prices: np.ndarray,
-                 dates: pd.DatetimeIndex = None, is_return_forecast: bool = False) -> Dict[str, Any]:
-        actual_prices = np.squeeze(actual_prices)
-        predicted_prices = np.squeeze(predicted_prices)
-        N = len(actual_prices)
-
-        # Observed asset returns
-        asset_returns = np.diff(actual_prices) / actual_prices[:-1]
-
-        # Forecasted expected return
-        if is_return_forecast:
-            pred_returns = predicted_prices[1:]
+    def simulate(self, actual_prices: np.ndarray = None, predicted_prices: np.ndarray = None,
+                 dates: pd.DatetimeIndex = None, is_return_forecast: bool = False,
+                 current_prices: np.ndarray = None, target_prices: np.ndarray = None,
+                 predicted_values: np.ndarray = None,
+                 dates_decision: pd.DatetimeIndex = None,
+                 dates_target: pd.DatetimeIndex = None) -> Dict[str, Any]:
+        """
+        Simulates causal out-of-sample trading strategy with 5-bps transaction costs.
+        
+        Causal Timeline:
+          Decision Time t:
+            - Investor observes current price P_t (current_prices[k])
+            - Model produces forecast for t+1 (predicted_values[k])
+            - Signal generated: Long (+1) if forecasted return > threshold, else Cash (0)
+          Holding Period t -> t+1:
+            - Asset moves from P_t to P_{t+1} (target_prices[k])
+            - Realized asset return: (P_{t+1} - P_t) / P_t
+            - Strategy earns: (Signal * Realized Return) - (Turnover * 5 bps)
+        """
+        if current_prices is not None and target_prices is not None and predicted_values is not None:
+            c_prices = np.squeeze(current_prices).astype(np.float64)
+            t_prices = np.squeeze(target_prices).astype(np.float64)
+            p_values = np.squeeze(predicted_values).astype(np.float64)
         else:
-            pred_returns = (predicted_prices[1:] - actual_prices[:-1]) / actual_prices[:-1]
+            # Fallback legacy compatibility: align strictly without forward shift
+            raw_act = np.squeeze(actual_prices).astype(np.float64)
+            raw_pred = np.squeeze(predicted_prices).astype(np.float64)
+            c_prices = raw_act[:-1]
+            t_prices = raw_act[1:]
+            p_values = raw_pred[:-1]
 
-        # Binary or Directional Position (+1 for Long, 0 for Cash/Neutral)
-        signals = (pred_returns > self.threshold).astype(float)
+        # 1. Realized asset return over each holding interval t -> t+1
+        asset_returns = (t_prices - c_prices) / (c_prices + 1e-8)
 
-        # Transaction cost on signal changes
-        turnover = np.abs(np.diff(np.concatenate(([0], signals))))
+        # 2. Expected forecast return formed at time t
+        if is_return_forecast:
+            pred_returns = p_values
+        else:
+            pred_returns = (p_values - c_prices) / (c_prices + 1e-8)
+
+        # 3. Binary Position (+1 for Long, 0 for Cash/Neutral) decided at time t
+        signals = (pred_returns > self.threshold).astype(np.float64)
+
+        # 4. Transaction cost on signal transitions (turnover)
+        turnover = np.abs(np.diff(np.concatenate(([0.0], signals))))
         tc = turnover * self.cost_pct
 
-        # Strategy returns after transaction costs
+        # 5. Realized strategy return after 5-bps transaction costs
         strategy_returns = (signals * asset_returns) - tc
 
         # Equity curves (starting at 1.0)

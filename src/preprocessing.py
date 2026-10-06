@@ -26,17 +26,31 @@ def prepare_datasets(df: pd.DataFrame, feature_cols: List[str], target_col: str 
     scaled_data = scaler.transform(raw_features)
 
     # Construct sliding window sequences (X, y)
-    X_all, y_all, dates_all = [], [], []
+    close_col_idx = feature_cols.index('Close')
+    raw_close = df['Close'].values.astype(np.float32)
+
+    X_all, y_all = [], []
+    dates_decision_all, dates_target_all = [], []
+    prices_decision_all, prices_target_all = [], []
+
     for i in range(len(scaled_data) - time_step):
         X_all.append(scaled_data[i : i + time_step])
         y_all.append(scaled_data[i + time_step, target_idx])
-        dates_all.append(df.index[i + time_step])
+        # Timestamp t (latest observed market close in input sequence)
+        dates_decision_all.append(df.index[i + time_step - 1])
+        prices_decision_all.append(raw_close[i + time_step - 1])
+        # Timestamp t+1 (forecast target time)
+        dates_target_all.append(df.index[i + time_step])
+        prices_target_all.append(raw_close[i + time_step])
 
     X_all = np.array(X_all, dtype=np.float32)
     y_all = np.array(y_all, dtype=np.float32)
-    dates_all = np.array(dates_all)
+    dates_decision_all = np.array(dates_decision_all)
+    dates_target_all = np.array(dates_target_all)
+    prices_decision_all = np.array(prices_decision_all, dtype=np.float32)
+    prices_target_all = np.array(prices_target_all, dtype=np.float32)
 
-    # Assign each sequence to train, val, or test based on prediction timestamp
+    # Assign each sequence to train, val, or test based on target timestamp
     pred_indices = np.arange(len(y_all)) + time_step
 
     train_mask = pred_indices < train_end_idx
@@ -46,15 +60,24 @@ def prepare_datasets(df: pd.DataFrame, feature_cols: List[str], target_col: str 
     return {
         'X_train': X_all[train_mask],
         'y_train': y_all[train_mask],
-        'dates_train': dates_all[train_mask],
+        'dates_train': dates_target_all[train_mask],
+        'dates_train_decision': dates_decision_all[train_mask],
+        'prices_train_decision': prices_decision_all[train_mask],
+        'prices_train_target': prices_target_all[train_mask],
 
         'X_val': X_all[val_mask],
         'y_val': y_all[val_mask],
-        'dates_val': dates_all[val_mask],
+        'dates_val': dates_target_all[val_mask],
+        'dates_val_decision': dates_decision_all[val_mask],
+        'prices_val_decision': prices_decision_all[val_mask],
+        'prices_val_target': prices_target_all[val_mask],
 
         'X_test': X_all[test_mask],
         'y_test': y_all[test_mask],
-        'dates_test': dates_all[test_mask],
+        'dates_test': dates_target_all[test_mask],
+        'dates_test_decision': dates_decision_all[test_mask],
+        'prices_test_decision': prices_decision_all[test_mask],
+        'prices_test_target': prices_target_all[test_mask],
 
         'scaler': scaler,
         'target_idx': target_idx,

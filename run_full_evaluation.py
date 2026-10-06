@@ -103,10 +103,11 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
     scaler = datasets['scaler']
 
     f_map = {d: i for i, d in enumerate(feat_dates)}
-    X_train_reg = np.array([aligned_probs[f_map[d]] for d in datasets['dates_train']], dtype=np.float32)
-    X_val_reg = np.array([aligned_probs[f_map[d]] for d in datasets['dates_val']], dtype=np.float32)
-    X_test_reg = np.array([aligned_probs[f_map[d]] for d in datasets['dates_test']], dtype=np.float32)
-    test_regimes = np.array([aligned_labels[f_map[d]] for d in datasets['dates_test']])
+    # Strictly sample regime probabilities at decision time t (end of lookback window X)
+    X_train_reg = np.array([aligned_probs[f_map[d]] for d in datasets['dates_train_decision']], dtype=np.float32)
+    X_val_reg = np.array([aligned_probs[f_map[d]] for d in datasets['dates_val_decision']], dtype=np.float32)
+    X_test_reg = np.array([aligned_probs[f_map[d]] for d in datasets['dates_test_decision']], dtype=np.float32)
+    test_regimes = np.array([aligned_labels[f_map[d]] for d in datasets['dates_test_decision']])
 
     y_test_act = inverse_transform_target(scaler, y_test, target_idx, num_features)
 
@@ -253,7 +254,10 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
     # SECTION 4: 3-FOLD EXPANDING WALK-FORWARD VALIDATION
     # -------------------------------------------------------------
     print("\n--- SECTION 4: 3-FOLD EXPANDING WALK-FORWARD VALIDATION ---")
-    wf_df, wf_agg = run_walk_forward_validation(feat_df, feature_cols, time_step=time_step, epochs=epochs, n_folds=3, seed=42)
+    wf_df, wf_agg = run_walk_forward_validation(
+        feat_df, feature_cols, time_step=time_step, epochs=epochs, n_folds=3, seed=42,
+        target_col=target_col, is_return=is_return
+    )
     print(wf_df.to_string(index=False))
     print(f"\nWalk-Forward Summary -> Mean RMSE: {wf_agg['mean_rmse']} +/- {wf_agg['std_rmse']} | Mean R2: {wf_agg['mean_r2']} | Mean MDA: {wf_agg['mean_mda']}%")
 
@@ -263,9 +267,21 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
     print("\n--- SECTION 5: 5-BPS TRANSACTION-COST-ADJUSTED FINANCIAL BACKTESTING ---")
     backtester = FinancialBacktester(threshold=0.0005, transaction_cost_bps=5.0)
     
-    bt_prop = backtester.simulate(actual_test_prices, pred_proposed, dates=datasets['dates_test'], is_return_forecast=is_return)['metrics']
-    bt_vgru = backtester.simulate(actual_test_prices, seed_preds["Model A: Vanilla GRU"], dates=datasets['dates_test'], is_return_forecast=is_return)['metrics']
-    bt_regfeat = backtester.simulate(actual_test_prices, seed_preds["Model D: Regime-Feature GRU (No Attention)"], dates=datasets['dates_test'], is_return_forecast=is_return)['metrics']
+    cur_p = datasets['prices_test_decision']
+    tar_p = datasets['prices_test_target']
+
+    bt_prop = backtester.simulate(current_prices=cur_p, target_prices=tar_p,
+                                  predicted_values=pred_proposed, is_return_forecast=is_return,
+                                  dates_decision=datasets['dates_test_decision'],
+                                  dates_target=datasets['dates_test'])['metrics']
+    bt_vgru = backtester.simulate(current_prices=cur_p, target_prices=tar_p,
+                                  predicted_values=seed_preds["Model A: Vanilla GRU"], is_return_forecast=is_return,
+                                  dates_decision=datasets['dates_test_decision'],
+                                  dates_target=datasets['dates_test'])['metrics']
+    bt_regfeat = backtester.simulate(current_prices=cur_p, target_prices=tar_p,
+                                     predicted_values=seed_preds["Model D: Regime-Feature GRU (No Attention)"], is_return_forecast=is_return,
+                                     dates_decision=datasets['dates_test_decision'],
+                                     dates_target=datasets['dates_test'])['metrics']
 
     bt_df = pd.DataFrame([
         {"Metric": "Cumulative Return", "Proposed (Model E)": f"{bt_prop['Strategy Return (%)']}%", "Vanilla GRU (Model A)": f"{bt_vgru['Strategy Return (%)']}%", "Regime-Feature (Model D)": f"{bt_regfeat['Strategy Return (%)']}%", "Buy & Hold Benchmark": f"{bt_prop['Buy & Hold Return (%)']}%"},
@@ -306,7 +322,7 @@ if __name__ == "__main__":
     parser.add_argument("--feature_level", type=str, default="level2_returns")
     parser.add_argument("--timestep", type=int, default=30)
     parser.add_argument("--epochs", type=int, default=15)
-    parser.add_argument("--seeds", type=int, nargs="+", default=[42, 101, 2024, 777, 999])
+    parser.add_argument("--seeds", type=int, nargs="+", default=[42, 101, 2024])
 
     args = parser.parse_args()
     run_comprehensive_evaluation(
