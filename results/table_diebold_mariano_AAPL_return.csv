@@ -1,5 +1,5 @@
 Pairwise Comparison,Loss Criterion,HLN-Adjusted DM Stat,p-value,Statistical Result
-Proposed (Model E) vs Vanilla GRU (Model A),MSE,-6.1759,< 0.0001,Proposed has significantly LOWER error
-Proposed (Model E) vs Standard Attention GRU (Model B),MSE,-0.5308,0.5959,No significant difference
-Proposed (Model E) vs Enhanced Attention GRU (Model C),MSE,-0.8318,0.4061,No significant difference
-Proposed (Model E) vs Regime-Feature GRU (Model D),MSE,-5.3743,< 0.0001,Proposed has significantly LOWER error
+Proposed (Model E) vs Vanilla GRU (Model A),MSE,-6.1946,< 0.0001,Proposed has significantly LOWER error
+Proposed (Model E) vs Standard Attention GRU (Model B),MSE,-0.4957,0.6204,No significant difference
+Proposed (Model E) vs Enhanced Attention GRU (Model C),MSE,-0.7891,0.4306,No significant difference
+Proposed (Model E) vs Regime-Feature GRU (Model D),MSE,-4.8199,< 0.0001,Proposed has significantly LOWER error

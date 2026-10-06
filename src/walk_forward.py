@@ -100,19 +100,21 @@ def run_walk_forward_validation(feat_df: pd.DataFrame, feature_cols: List[str],
         y_test_pred = inverse_transform_target(scaler, test_preds_scaled, target_idx, num_features)
         
         m = compute_forecasting_metrics(y_test_act, y_test_pred, is_return=is_return)
-        fold_metrics.append({
+        f_row = {
             "Fold": f"Fold {fold_id}",
             "Train Samples": len(X_train_seq),
             "Val Samples": len(X_val_seq),
             "Test Samples": len(X_test_seq),
             "Test Period": f"{datasets['dates_test'][0].strftime('%Y-%m')} to {datasets['dates_test'][-1].strftime('%Y-%m')}",
             "Test RMSE": m['rmse'],
-            "Test MAE": m['mae'],
-            "Test MAPE (%)": m['mape'],
-            "Test R2": m['r2'],
-            "MDA (%)": m['directional_acc_pct'],
-            "Train Time (s)": round(dur, 2)
-        })
+            "Test MAE": m['mae']
+        }
+        if not is_return and 'mape' in m:
+            f_row["Test MAPE (%)"] = m['mape']
+        f_row["Test R2"] = m['r2']
+        f_row["MDA (%)"] = m['directional_acc_pct']
+        f_row["Train Time (s)"] = round(dur, 2)
+        fold_metrics.append(f_row)
         
     df_folds = pd.DataFrame(fold_metrics)
     

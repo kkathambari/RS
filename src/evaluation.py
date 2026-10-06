@@ -6,20 +6,13 @@ from typing import Dict, Any
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 
-def compute_forecasting_metrics(y_true: np.ndarray, y_pred: np.ndarray, is_return: bool = False) -> Dict[str, float]:
+def compute_forecasting_metrics(y_true: np.ndarray, y_pred: np.ndarray, is_return: bool = False) -> Dict[str, Any]:
     """Computes regression and directional accuracy metrics."""
     y_true = np.squeeze(y_true)
     y_pred = np.squeeze(y_pred)
 
     rmse = float(np.sqrt(mean_squared_error(y_true, y_pred)))
     mae = float(mean_absolute_error(y_true, y_pred))
-
-    non_zero = np.abs(y_true) > 1e-5
-    if np.any(non_zero):
-        mape = float(np.mean(np.abs((y_true[non_zero] - y_pred[non_zero]) / y_true[non_zero])) * 100.0)
-    else:
-        mape = 0.0
-
     r2 = float(r2_score(y_true, y_pred))
 
     if len(y_true) > 1:
@@ -32,13 +25,23 @@ def compute_forecasting_metrics(y_true: np.ndarray, y_pred: np.ndarray, is_retur
     else:
         mda = 0.0
 
-    return {
+    metrics = {
         'rmse': round(rmse, 4),
         'mae': round(mae, 4),
-        'mape': round(mape, 3),
         'r2': round(r2, 4),
         'directional_acc_pct': round(mda, 2)
     }
+
+    # MAPE is econometrically ill-defined and misleading for financial returns near zero
+    if not is_return:
+        non_zero = np.abs(y_true) > 1e-5
+        if np.any(non_zero):
+            mape = float(np.mean(np.abs((y_true[non_zero] - y_pred[non_zero]) / y_true[non_zero])) * 100.0)
+        else:
+            mape = 0.0
+        metrics['mape'] = round(mape, 3)
+
+    return metrics
 
 
 def log_experiment(results_dir: str, run_meta: Dict[str, Any],

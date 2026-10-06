@@ -68,7 +68,7 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
 
     # 2. Single Chronological Timestamp Cutoff for ALL Components
     train_end_idx = int(len(feat_df) * 0.70)
-    train_cutoff_date = feat_df.index[train_end_idx]
+    train_cutoff_date = feat_df.index[train_end_idx - 1]
 
     # Fit GMM Regime Detector strictly up to the exact train_cutoff_date
     reg_det = MarketRegimeDetector(n_regimes=4, random_state=42)
@@ -130,8 +130,9 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
         "Model E: Proposed Regime-Adaptive Attention GRU"
     ]
 
+    eval_seed = 2024 if 2024 in seeds else seeds[-1]
     seed_metrics = {k: [] for k in model_keys}
-    seed_preds = {k: None for k in model_keys}
+    eval_preds = {k: None for k in model_keys}
 
     for s_idx, s in enumerate(seeds):
         print(f"\n>> Running Evaluation Seed {s} ({s_idx + 1}/{len(seeds)})...")
@@ -142,7 +143,8 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
         m_a, _, _ = train_dl_baseline(m_a, X_train_seq, y_train, X_val_seq, y_val, epochs=epochs, ckpt_name=f"v_gru_s{s}")
         p_a = inverse_transform_target(scaler, m_a.predict(X_test_seq, verbose=0), target_idx, num_features)
         seed_metrics["Model A: Vanilla GRU"].append(compute_forecasting_metrics(y_test_act, p_a, is_return=is_return))
-        seed_preds["Model A: Vanilla GRU"] = p_a
+        if s == eval_seed:
+            eval_preds["Model A: Vanilla GRU"] = p_a
 
         # Model B: Standard Attention GRU
         set_seed(s)
@@ -150,7 +152,8 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
         m_b, _, _ = train_dl_baseline(m_b, X_train_seq, y_train, X_val_seq, y_val, epochs=epochs, ckpt_name=f"std_att_s{s}")
         p_b = inverse_transform_target(scaler, m_b.predict(X_test_seq, verbose=0), target_idx, num_features)
         seed_metrics["Model B: Standard Attention GRU"].append(compute_forecasting_metrics(y_test_act, p_b, is_return=is_return))
-        seed_preds["Model B: Standard Attention GRU"] = p_b
+        if s == eval_seed:
+            eval_preds["Model B: Standard Attention GRU"] = p_b
 
         # Model C: GRU + Enhanced Attention (Static)
         set_seed(s)
@@ -158,7 +161,8 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
                                     time_step=time_step, epochs=epochs, ckpt_name=f"enh_att_s{s}")
         p_c = inverse_transform_target(scaler, m_c.predict(X_test_seq, verbose=0), target_idx, num_features)
         seed_metrics["Model C: GRU + Enhanced Attention (Static)"].append(compute_forecasting_metrics(y_test_act, p_c, is_return=is_return))
-        seed_preds["Model C: GRU + Enhanced Attention (Static)"] = p_c
+        if s == eval_seed:
+            eval_preds["Model C: GRU + Enhanced Attention (Static)"] = p_c
 
         # Model D: Regime-Feature GRU (Control: direct features, no attention)
         set_seed(s)
@@ -168,7 +172,8 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
                                       epochs=epochs, ckpt_name=f"reg_feat_s{s}")
         p_d = inverse_transform_target(scaler, m_d.predict([X_test_seq, X_test_reg], verbose=0), target_idx, num_features)
         seed_metrics["Model D: Regime-Feature GRU (No Attention)"].append(compute_forecasting_metrics(y_test_act, p_d, is_return=is_return))
-        seed_preds["Model D: Regime-Feature GRU (No Attention)"] = p_d
+        if s == eval_seed:
+            eval_preds["Model D: Regime-Feature GRU (No Attention)"] = p_d
 
         # Model E: Proposed Regime-Adaptive Attention GRU
         set_seed(s)
@@ -179,28 +184,34 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
         )
         p_e = inverse_transform_target(scaler, m_e.predict([X_test_seq, X_test_reg], verbose=0), target_idx, num_features)
         seed_metrics["Model E: Proposed Regime-Adaptive Attention GRU"].append(compute_forecasting_metrics(y_test_act, p_e, is_return=is_return))
-        seed_preds["Model E: Proposed Regime-Adaptive Attention GRU"] = p_e
+        if s == eval_seed:
+            eval_preds["Model E: Proposed Regime-Adaptive Attention GRU"] = p_e
 
     # Compile Multi-Seed Symmetrical Summary
     multi_seed_rows = []
     for k in model_keys:
         agg = aggregate_seed_metrics(seed_metrics[k])
-        multi_seed_rows.append({
+        row = {
             "Architecture": k,
             "Test RMSE (Mean +/- Std)": agg['rmse_mean_std'],
-            "Test MAE (Mean +/- Std)": agg['mae_mean_std'],
-            "Test MAPE (%)": f"{agg['mape_mean']:.2f}%",
-            "Test R2": f"{agg['r2_mean']:.4f}",
-            "MDA (%)": f"{agg['directional_acc_pct_mean']:.1f}%"
-        })
+            "Test MAE (Mean +/- Std)": agg['mae_mean_std']
+        }
+        if not is_return and 'mape_mean' in agg:
+            row["Test MAPE (%)"] = f"{agg['mape_mean']:.2f}%"
+        row["Test R2"] = f"{agg['r2_mean']:.4f}"
+        row["MDA (%)"] = f"{agg['directional_acc_pct_mean']:.1f}%"
+        multi_seed_rows.append(row)
     multi_seed_df = pd.DataFrame(multi_seed_rows)
     print("\n--- MULTI-SEED SUMMARY TABLE ---")
     print(multi_seed_df.to_string(index=False))
 
+    print(f"\n>> Note: Multi-seed forecasting metrics are aggregated across {len(seeds)} random seeds ({seeds}).")
+    print(f">> Regime-specific breakdown, Diebold-Mariano hypothesis tests, and trading simulations use the pre-specified evaluation seed ({eval_seed}) to evaluate a deterministic model instance rather than averaging forecasts across independent models.")
+
     # -------------------------------------------------------------
     # SECTION 2: REGIME-SPECIFIC BREAKDOWN TABLE
     # -------------------------------------------------------------
-    print("\n--- SECTION 2: TEST PERFORMANCE BY DETECTED REGIME (RMSE) ---")
+    print(f"\n--- SECTION 2: TEST PERFORMANCE BY DETECTED REGIME (RMSE, SEED {eval_seed}) ---")
     regime_breakdown_rows = []
     for r_name in REGIME_NAMES:
         mask = (test_regimes == r_name)
@@ -209,7 +220,7 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
             continue
         row = {"Regime": r_name, "Test Samples": n_samples}
         for k in model_keys:
-            pred = seed_preds[k]
+            pred = eval_preds[k]
             r_rmse = float(np.sqrt(np.mean((y_test_act[mask] - pred[mask]) ** 2)))
             short_name = k.split(":")[0].strip()
             row[f"{short_name} RMSE"] = round(r_rmse, 3)
@@ -225,15 +236,15 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
     # -------------------------------------------------------------
     # SECTION 3: DIEBOLD-MARIANO HYPOTHESIS TESTS (NEWEY-WEST + HLN)
     # -------------------------------------------------------------
-    print("\n--- SECTION 3: DIEBOLD-MARIANO HYPOTHESIS TESTS (PROPOSED VS BASELINES) ---")
+    print(f"\n--- SECTION 3: DIEBOLD-MARIANO HYPOTHESIS TESTS (PROPOSED VS BASELINES, SEED {eval_seed}) ---")
     dm_rows = []
-    pred_proposed = seed_preds["Model E: Proposed Regime-Adaptive Attention GRU"]
+    pred_proposed = eval_preds["Model E: Proposed Regime-Adaptive Attention GRU"]
 
     comparisons = [
-        ("Proposed (Model E) vs Vanilla GRU (Model A)", seed_preds["Model A: Vanilla GRU"]),
-        ("Proposed (Model E) vs Standard Attention GRU (Model B)", seed_preds["Model B: Standard Attention GRU"]),
-        ("Proposed (Model E) vs Enhanced Attention GRU (Model C)", seed_preds["Model C: GRU + Enhanced Attention (Static)"]),
-        ("Proposed (Model E) vs Regime-Feature GRU (Model D)", seed_preds["Model D: Regime-Feature GRU (No Attention)"])
+        ("Proposed (Model E) vs Vanilla GRU (Model A)", eval_preds["Model A: Vanilla GRU"]),
+        ("Proposed (Model E) vs Standard Attention GRU (Model B)", eval_preds["Model B: Standard Attention GRU"]),
+        ("Proposed (Model E) vs Enhanced Attention GRU (Model C)", eval_preds["Model C: GRU + Enhanced Attention (Static)"]),
+        ("Proposed (Model E) vs Regime-Feature GRU (Model D)", eval_preds["Model D: Regime-Feature GRU (No Attention)"])
     ]
 
     for comp_name, baseline_pred in comparisons:
@@ -264,7 +275,7 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
     # -------------------------------------------------------------
     # SECTION 5: FINANCIAL BACKTESTING & RISK PROFILE (PHASE 17)
     # -------------------------------------------------------------
-    print("\n--- SECTION 5: 5-BPS TRANSACTION-COST-ADJUSTED FINANCIAL BACKTESTING ---")
+    print(f"\n--- SECTION 5: 5-BPS TRANSACTION-COST-ADJUSTED FINANCIAL BACKTESTING (SEED {eval_seed}) ---")
     backtester = FinancialBacktester(threshold=0.0005, transaction_cost_bps=5.0)
     
     cur_p = datasets['prices_test_decision']
@@ -275,19 +286,19 @@ def run_comprehensive_evaluation(ticker: str = "AAPL",
                                   dates_decision=datasets['dates_test_decision'],
                                   dates_target=datasets['dates_test'])['metrics']
     bt_vgru = backtester.simulate(current_prices=cur_p, target_prices=tar_p,
-                                  predicted_values=seed_preds["Model A: Vanilla GRU"], is_return_forecast=is_return,
+                                  predicted_values=eval_preds["Model A: Vanilla GRU"], is_return_forecast=is_return,
                                   dates_decision=datasets['dates_test_decision'],
                                   dates_target=datasets['dates_test'])['metrics']
     bt_std_att = backtester.simulate(current_prices=cur_p, target_prices=tar_p,
-                                     predicted_values=seed_preds["Model B: Standard Attention GRU"], is_return_forecast=is_return,
+                                     predicted_values=eval_preds["Model B: Standard Attention GRU"], is_return_forecast=is_return,
                                      dates_decision=datasets['dates_test_decision'],
                                      dates_target=datasets['dates_test'])['metrics']
     bt_enh_att = backtester.simulate(current_prices=cur_p, target_prices=tar_p,
-                                     predicted_values=seed_preds["Model C: GRU + Enhanced Attention (Static)"], is_return_forecast=is_return,
+                                     predicted_values=eval_preds["Model C: GRU + Enhanced Attention (Static)"], is_return_forecast=is_return,
                                      dates_decision=datasets['dates_test_decision'],
                                      dates_target=datasets['dates_test'])['metrics']
     bt_regfeat = backtester.simulate(current_prices=cur_p, target_prices=tar_p,
-                                     predicted_values=seed_preds["Model D: Regime-Feature GRU (No Attention)"], is_return_forecast=is_return,
+                                     predicted_values=eval_preds["Model D: Regime-Feature GRU (No Attention)"], is_return_forecast=is_return,
                                      dates_decision=datasets['dates_test_decision'],
                                      dates_target=datasets['dates_test'])['metrics']
 

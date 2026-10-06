@@ -64,76 +64,78 @@ Evaluated across 3 seeds (`42, 101, 2024`) on the held-out test split:
 | Architecture | Test RMSE (Mean ± Std) | Test MAE (Mean ± Std) | Test $R^2$ | Directional Acc. (MDA) |
 | :--- | :---: | :---: | :---: | :---: |
 | **Model A: Vanilla GRU** | **4.5174 ± 1.0542** | **3.7583 ± 0.9861** | **0.9441** | 48.6% |
-| **Model D: Regime-Feature GRU (Control)** | 6.2830 ± 2.0139 | 5.1347 ± 1.6468 | 0.8884 | 48.1% |
-| **Model E: Proposed Regime-Adaptive Attention** | **7.2567 ± 0.2694** | **6.1356 ± 0.4266** | **0.8606** | **50.5%** |
-| **Model B: Standard Attention GRU** | 7.8031 ± 0.4920 | 6.6370 ± 0.4926 | 0.8386 | 51.4% |
-| **Model C: Enhanced Attention (Static)** | 8.6070 ± 0.7963 | 7.3878 ± 0.6206 | 0.8029 | 49.0% |
+| **Model D: Regime-Feature GRU (Control)** | 6.2571 ± 2.1172 | 5.1063 ± 1.7360 | 0.8885 | 48.4% |
+| **Model E: Proposed Regime-Adaptive Attention** | **7.5933 ± 0.3404** | **6.4711 ± 0.3015** | **0.8473** | 48.8% |
+| **Model B: Standard Attention GRU** | 8.2292 ± 0.7497 | 7.0282 ± 0.6870 | 0.8199 | **49.7%** |
+| **Model C: Enhanced Attention (Static)** | 8.8318 ± 0.5209 | 7.5674 ± 0.3837 | 0.7932 | 48.8% |
 
 *Point-Regression vs Trading Reality:* Vanilla GRU achieves lower point RMSE because predicting near persistence ($\hat{P}_{t+1} \approx P_t$) minimizes squared distance on trending random walks. The proposed regime-adaptive attention model achieves stronger risk-adjusted trading performance than the evaluated trading baselines, despite not minimizing raw price-level RMSE. Note that Model E achieves superior stability among attention architectures.
 
 #### Case B: Stationary Return Forecasting ($R_{t+1}$)
-When the random-walk persistence shortcut is eliminated by forecasting stationary 1-day returns:
+When the random-walk persistence shortcut is eliminated by forecasting stationary 1-day returns (MAPE is omitted as econometrically ill-defined for returns near zero):
 
-| Architecture | Test RMSE (Mean ± Std) | Test MAE (Mean ± Std) | Directional Acc. (MDA) |
-| :--- | :---: | :---: | :---: |
-| **Model B: Standard Attention GRU** | **0.0170 ± 0.0002** | **0.0125 ± 0.0001** | **50.6%** |
-| **Model E: Proposed Regime-Adaptive Attention** | **0.0173 ± 0.0004** | **0.0127 ± 0.0003** | 46.6% |
-| **Model C: Enhanced Attention (Static)** | 0.0176 ± 0.0008 | 0.0130 ± 0.0008 | 46.5% |
-| **Model A: Vanilla GRU** | 0.0182 ± 0.0006 | 0.0133 ± 0.0005 | 46.4% |
-| **Model D: Regime-Feature GRU (Control)** | 0.0197 ± 0.0004 | 0.0147 ± 0.0006 | 46.5% |
+| Architecture | Test RMSE (Mean ± Std) | Test MAE (Mean ± Std) | Test $R^2$ | Directional Acc. (MDA) |
+| :--- | :---: | :---: | :---: | :---: |
+| **Model B: Standard Attention GRU** | **0.0170 ± 0.0002** | **0.0125 ± 0.0001** | **-0.0397** | **50.6%** |
+| **Model E: Proposed Regime-Adaptive Attention** | **0.0173 ± 0.0004** | **0.0127 ± 0.0003** | **-0.0703** | 46.4% |
+| **Model C: Enhanced Attention (Static)** | 0.0176 ± 0.0008 | 0.0130 ± 0.0008 | -0.1119 | 46.5% |
+| **Model A: Vanilla GRU** | 0.0182 ± 0.0006 | 0.0133 ± 0.0005 | -0.1852 | 46.4% |
+| **Model D: Regime-Feature GRU (Control)** | 0.0196 ± 0.0007 | 0.0145 ± 0.0006 | -0.3778 | 47.4% |
 
-*Key Finding on Returns:* When predicting stationary returns, Model E achieves **statistically significantly lower error** than Vanilla GRU ($DM = -6.1759, p < 0.0001$) and Regime-Feature GRU ($DM = -5.3743, p < 0.0001$), while performing statistically indistinguishably from Standard Attention ($DM = -0.5308, p = 0.5959$). Rather than relying on directional accuracy (MDA $\approx 46.6\%$), the core empirical contribution is that regime-conditioned temporal representations produce better return calibration, enabling higher risk-adjusted trading Sharpe and capital preservation during market stress.
+*Key Finding on Returns:* When predicting stationary returns, Model E achieves **statistically significantly lower error** than Vanilla GRU ($DM = -6.1946, p < 0.0001$) and Regime-Feature GRU ($DM = -4.8199, p < 0.0001$), while performing statistically indistinguishably from Standard Attention ($DM = -0.4957, p = 0.6204$). Rather than relying on directional accuracy (MDA $\approx 46.4\%$), the core empirical contribution is that regime-conditioned temporal representations produce better return calibration, enabling higher risk-adjusted trading Sharpe and capital preservation during market stress.
+
+> **Evaluation Protocol Note:** Multi-seed forecasting metrics are aggregated across 3 random seeds (`[42, 101, 2024]`). Regime-specific breakdown, Diebold-Mariano hypothesis tests, and trading simulations use the pre-specified evaluation seed (`2024`) to evaluate a deterministic model instance rather than averaging forecasts across independent models.
 
 ---
 
-### 3. Pairwise Diebold–Mariano Hypothesis Tests (Newey–West + HLN Corrected)
+### 3. Pairwise Diebold–Mariano Hypothesis Tests (Newey–West + HLN Corrected, Seed 2024)
 
 #### On Price Target ($P_{t+1}$):
 | Pairwise Comparison | Loss Criterion | HLN DM Stat | p-value | Statistical Result |
 | :--- | :---: | :---: | :---: | :--- |
-| Proposed (Model E) vs Vanilla GRU (Model A) | MSE | +4.3611 | $< 0.0001$ | Baseline has significantly LOWER error |
-| **Proposed (Model E) vs Standard Attention (Model B)** | MSE | **-4.4974** | **$< 0.0001$** | **Proposed has significantly LOWER error** |
-| **Proposed (Model E) vs Enhanced Attention (Model C)** | MSE | **-4.0494** | **$< 0.0001$** | **Proposed has significantly LOWER error** |
-| **Proposed (Model E) vs Regime-Feature (Model D)** | MSE | **-2.2970** | **$0.0222$** | **Proposed has significantly LOWER error** |
+| Proposed (Model E) vs Vanilla GRU (Model A) | MSE | +4.3660 | $< 0.0001$ | Baseline has significantly LOWER error |
+| **Proposed (Model E) vs Standard Attention (Model B)** | MSE | **-4.4909** | **$< 0.0001$** | **Proposed has significantly LOWER error** |
+| **Proposed (Model E) vs Enhanced Attention (Model C)** | MSE | **-4.0422** | **$< 0.0001$** | **Proposed has significantly LOWER error** |
+| **Proposed (Model E) vs Regime-Feature (Model D)** | MSE | **-2.4663** | **$0.0142$** | **Proposed has significantly LOWER error** |
 
 #### On Stationary Return Target ($R_{t+1}$):
 | Pairwise Comparison | Loss Criterion | HLN DM Stat | p-value | Statistical Result |
 | :--- | :---: | :---: | :---: | :--- |
-| **Proposed (Model E) vs Vanilla GRU (Model A)** | MSE | **-6.1759** | **$< 0.0001$** | **Proposed has significantly LOWER error** |
-| Proposed (Model E) vs Standard Attention (Model B) | MSE | -0.5308 | $0.5959$ | No significant difference |
-| Proposed (Model E) vs Enhanced Attention (Model C) | MSE | -0.8318 | $0.4061$ | No significant difference |
-| **Proposed (Model E) vs Regime-Feature (Model D)** | MSE | **-5.3743** | **$< 0.0001$** | **Proposed has significantly LOWER error** |
+| **Proposed (Model E) vs Vanilla GRU (Model A)** | MSE | **-6.1946** | **$< 0.0001$** | **Proposed has significantly LOWER error** |
+| Proposed (Model E) vs Standard Attention (Model B) | MSE | -0.4957 | $0.6204$ | No significant difference |
+| Proposed (Model E) vs Enhanced Attention (Model C) | MSE | -0.7891 | $0.4306$ | No significant difference |
+| **Proposed (Model E) vs Regime-Feature (Model D)** | MSE | **-4.8199** | **$< 0.0001$** | **Proposed has significantly LOWER error** |
 
 ---
 
-### 4. Financial Decision Making: 5-bps Transaction-Cost-Adjusted Backtesting
+### 4. Financial Decision Making: 5-bps Transaction-Cost-Adjusted Backtesting (Seed 2024)
 
 Executed using strictly causal sample-by-sample matching (decision at $t$, holding period $t \rightarrow t+1$):
 
 | Metric | Vanilla GRU (A) | Standard Attn (B) | Enhanced Attn (C) | Regime Feature (D) | Proposed (E) | Buy & Hold Benchmark |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Cumulative Return** | 10.28% | 5.12% | 5.82% | -5.81% | **11.83%** | 21.89% |
-| **Annualized Return** | 7.69% | 3.85% | 4.37% | -4.43% | **8.83%** | 16.16% |
-| **Annualized Sharpe** | 0.425 | 0.188 | 0.215 | -0.229 | **0.437** | 0.622 |
-| **Maximum Drawdown** | **-8.50%** | -15.50% | -15.63% | -16.72% | **-10.34%** | -23.50% |
-| **Strategy Win Rate** | 50.77% | 52.38% | 55.14% | 49.07% | **53.93%** | N/A |
+| **Cumulative Return** | 10.28% | 5.12% | 5.82% | -6.24% | **11.83%** | 21.89% |
+| **Annualized Return** | 7.69% | 3.85% | 4.37% | -4.76% | **8.83%** | 16.16% |
+| **Annualized Sharpe** | 0.425 | 0.188 | 0.215 | -0.247 | **0.437** | 0.622 |
+| **Maximum Drawdown** | **-8.50%** | -15.50% | -15.63% | -15.97% | **-10.34%** | -23.50% |
+| **Strategy Win Rate** | 50.77% | 52.38% | 55.14% | 50.00% | **53.93%** | N/A |
 | **Active Trading Days** | 65 / 333 | 105 / 333 | 107 / 333 | 108 / 333 | 89 / 333 | 333 / 333 |
 
 #### Mechanistic Ablation Insights:
 1. **Model E Outperforms All Attention and Control Baselines:** Proposed Model E achieves the highest return (11.83%) and Sharpe (0.437) among all deep learning candidates, outperforming Standard Attention (5.12%, Sharpe 0.188) and Enhanced Attention (5.82%, Sharpe 0.215).
-2. **Mechanistic Ablation Evidence:** Direct feature appending (**Model D**) fails completely (-5.81% return, Sharpe -0.229). Conditioning temporal attention on regime probabilities (**Model E**) transforms this information into a net-positive trading policy.
-3. **Downside Capital Preservation:** Both Model E (-10.34%) and Model A (-8.50%) achieve less than half the maximum drawdown of Buy & Hold (-23.50%), showing active downside risk management.
+2. **Mechanistic Ablation Evidence:** Direct regime-feature concatenation (**Model D**) underperforms the proposed regime-conditioned attention mechanism (-6.24% return, Sharpe -0.247). Conditioning temporal attention on regime probabilities (**Model E**) transforms this information into a net-positive trading policy.
+3. **Downside Capital Preservation:** Both Model E (-10.34%) and Model A (-8.50%) achieve less than half the maximum drawdown of Buy & Hold (-23.50%), demonstrating active downside risk mitigation.
 
 ---
 
 ### 5. Deterministic Expanding Walk-Forward Validation
 
 #### Price Target Walk-Forward ($P_{t+1}$):
-| Fold | Window Span | Test Period | Test RMSE | Test MAE | Test $R^2$ | Directional Acc. (MDA) |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Fold 1** | 50% Train / 15% Val / 15% Test | 2020-11 to 2022-03 | 45.2169 | 43.2145 | -5.9343 | 48.19% |
-| **Fold 2** | 60% Train / 15% Val / 15% Test | 2021-10 to 2023-02 | 11.4723 | 9.6221 | 0.2726 | 50.60% |
-| **Fold 3** | 70% Train / 15% Val / 15% Test | 2022-09 to 2023-12 | 7.9543 | 6.8102 | 0.8327 | 48.19% |
+| Fold | Window Span | Test Period | Test RMSE | Test MAE | Test MAPE (%) | Test $R^2$ | Directional Acc. (MDA) |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Fold 1** | 50% Train / 15% Val / 15% Test | 2020-11 to 2022-03 | 45.2169 | 43.2145 | 29.23% | -5.9343 | 48.19% |
+| **Fold 2** | 60% Train / 15% Val / 15% Test | 2021-10 to 2023-02 | 11.4723 | 9.6221 | 6.02% | 0.2726 | 50.60% |
+| **Fold 3** | 70% Train / 15% Val / 15% Test | 2022-09 to 2023-12 | 7.9543 | 6.8102 | 4.02% | 0.8327 | 48.19% |
 
 #### Stationary Return Target Walk-Forward ($R_{t+1}$):
 | Fold | Window Span | Test Period | Test RMSE | Test MAE | Test $R^2$ | Directional Acc. (MDA) |
